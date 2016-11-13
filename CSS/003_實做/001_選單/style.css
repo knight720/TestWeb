@@ -1,0 +1,32 @@
+body{
+	background: Gray;
+	/* padding: 0px; */
+	margin: 0px;
+	/* width:100%; */
+}
+
+#menu {
+	background: yellow;
+	/*position: absolute;*/
+	top: 0;
+	left: 0;
+	/* margin: 10px; */
+	padding: 10px;
+	/* border-width: 10px; */
+	/* border-style: solid; */
+	/* border-color: red; */
+	width: 100%;
+	
+}
+
+#fun {
+	display: inline;
+	padding: 10px;
+	/* display: inline-block; */
+	/* float:left; */
+}
+
+#content {
+	background: blue;
+	padding:10px;
+}
