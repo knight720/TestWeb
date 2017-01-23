@@ -1,10 +1,10 @@
 (function(global){
 
-  var AutoSize = function(canvas){
-    return new AutoSize.init(canvas);
+  var FitSize = function(canvas){
+    return new FitSize.init(canvas);
   }
 
-  AutoSize.prototype = {
+  FitSize.prototype = {
 	  
 	  onResize: function(){
 		  console.log("onResize");
@@ -18,7 +18,7 @@
 	  
   }
 
-  AutoSize.init = function(canvas){
+  FitSize.init = function(canvas){
 	var self = this;
 	self.Canvas = canvas;
 	console.log(self);
@@ -32,8 +32,8 @@
 	
 	}
 	
-  AutoSize.init.prototype = AutoSize.prototype;
+  FitSize.init.prototype = FitSize.prototype;
 
-  global.AutoSize = global.A$ = AutoSize;
+  global.FitSize = global.A$ = FitSize;
 
 })(window)

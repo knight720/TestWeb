@@ -1,10 +1,10 @@
 (function(global){
 
-  var AutoSize = function(canvas){
-    return new AutoSize.init(canvas);
+  var SPP = function(canvas){
+    return new SPP.init(canvas);
   }
 
-  AutoSize.prototype = {
+  SPP.prototype = {
 	  
 	  onResize: function(){
 		  console.log("onResize");
@@ -18,7 +18,7 @@
 	  
   }
 
-  AutoSize.init = function(canvas){
+  SPP.init = function(canvas){
 	var self = this;
 	self.Canvas = canvas;
 	console.log(self);
@@ -32,8 +32,8 @@
 	
 	}
 	
-  AutoSize.init.prototype = AutoSize.prototype;
+  SPP.init.prototype = SPP.prototype;
 
-  global.AutoSize = global.A$ = AutoSize;
+  global.SPP = global.A$ = SPP;
 
 })(window)
