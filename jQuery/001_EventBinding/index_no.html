@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Title of the document</title>
+</head>
+
+<body>
+<div class="container well">
+    <h1>jQuery Click Event</h1>
+    <p> </p>
+    <button class="btn btn-primary add">Click me to add new item</button>
+    <ul style="margin-top:5px;margin-bottom:5px;" class="li">
+        <li style="margin-top:5px; font-size:1.2em">I am old item.  <button class="btn btn-danger delete">Delete</button></li>
+        <li style="margin-top:5px; font-size:1.2em">I am old item.  <button class="btn btn-danger delete">Delete</button></li>
+        <li style="margin-top:5px; font-size:1.2em">I am old item.  <button class="btn btn-danger delete">Delete</button></li>
+        <li style="margin-top:5px; font-size:1.2em">I am old item.  <button class="btn btn-danger delete">Delete</button></li>
+    </ul>
+</div>
+
+<script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script>
+(function ($) {
+    $(".add").click(function(){
+        $(".li").append('<li style="margin-top:5px; font-size:1.2em">I am new item.  <button class="btn btn-danger delete">Delete</button></li>');
+    });
+    $(".delete").click(function(){
+        $(this).parent().remove();
+    });
+})(jQuery);
+</script>
+
+</body>
+
+</html>
