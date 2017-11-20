@@ -6,9 +6,21 @@
 </head>
 
 <body>
-Content of the document......
-{{1+1}}
-<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.6/angular.js"></script>
+
+<div id="1">
+	Content of the document......
+	{{1+1}}
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.6/angular.js"></script>
+</div>
+<p>
+<div id="2">
+	qty: <input type="number" ng-model="quantity" ng-init="quantity = 1">
+	<br>
+	prc: <input type="number" ng-model="price" ng-init="price = 299">
+	<br>
+	tal: {{quantity * price}}
+</div>
+
 </body>
 
 </html>
