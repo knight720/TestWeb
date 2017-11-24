@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title> - Test AngularJS</title>
+
+</head>
+
+<body>
+
+<div data-ng-app="" data-ng-init="firstName='John';names=['Jani','Hege','a','b','c']">
+
+<p>The name is <span data-ng-bind="firstName"></span></p>	
+
+	<div >
+		<ul>
+			<li data-ng-repeat="x in names">
+				{{ x }}
+			</li>
+		</ul>
+	</div>
+
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.6/angular.js"></script>
+</body>
+
+</html>

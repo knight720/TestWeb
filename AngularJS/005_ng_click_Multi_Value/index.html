@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title> - Test AngularJS</title>
+
+</head>
+
+<body>
+
+<div data-ng-app="" data-ng-init="firstName='John'; name2 ='a'; name3='c'">
+
+<p>The name is <span data-ng-bind="firstName"></span></p>	
+
+	<div >
+		<div data-ng-bind='firstName'></div>
+		<div data-ng-bind='name2'></div>
+		<div data-ng-bind='name3'></div>
+	</div>
+	<button data-ng-click="name2 = 'c';name3='aaa'">Update</button>
+</div>
+
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.6/angular.js"></script>
+</body>
+
+</html>
