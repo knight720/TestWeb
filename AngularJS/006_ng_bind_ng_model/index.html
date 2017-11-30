@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title> - Test AngularJS</title>
+
+	</head>
+	<body>
+
+		<div ng-app='MyApp' ng-controller='MyController as myCtrl' ng-init="myCtrl.Var1 = 0">
+			<p ng-click='myCtrl.Click()'>Click</p>
+			<p>1:<span>{{myCtrl.Var1}}</span></p>
+			<p>2:<span>{{::myCtrl.Var1}}</span></p>
+			<p>3:<span ng-bind='myCtrl.Var1'></span></p>
+			<p>4:<span ng-model='myCtrl.Var1'></span></p>
+			<input ng-model='myCtrl.Var1'>
+		</div>
+
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.6/angular.js"></script>
+		<script>
+			angular.module('MyApp',[]);
+			angular.module('MyApp')
+				.controller('MyController',function() {
+				
+					this.Var1 = 1;
+				
+					this.Click = function() {
+						//alert('Click!');
+						this.Var1++;
+					};
+				
+				});
+		</script>
+	</body>
+</html>

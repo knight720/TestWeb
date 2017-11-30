@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title> - CSS align right</title>
+
+<style>
+.rb {
+	border-style:solid;
+	border-width:1px;
+	border-color:red;
+}
+.gb {
+	background-color:lightgray;
+}
+.tf {
+	width:50%;
+	table-layout:fixed;
+}
+</style>
+
+</head>
+
+<body>
+
+	<div class="rb" style="text-align:center">
+		<div style="width:50px">
+			long text abc
+		</div>
+	</div>
+	
+	<table class="rb tf">
+		<tr class="gb" >
+			<td style="width:40%">
+				a
+			</td>
+			<td style="width:40%">
+				b
+			</td>
+			<td class="rb" style="width:20%">
+				c
+			</td>
+		</tr>
+	</table>
+	
+	<table class="rb tf">
+		<tr class="gb" >
+			<td style="width:40%">
+				a
+			</td>
+			<td style="">
+				b
+			</td>
+			<td class="rb" style="white-space:nowrap;text-align:right;">
+				cabadfadf cabadfadf
+			</td>
+		</tr>
+	</table>
+
+</body>
+
+</html>
