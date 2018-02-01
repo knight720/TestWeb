@@ -1,6 +1,6 @@
 var sYear = 2018;
-var sMonth = 2;
-var sDay = 1;
+var sMonth = 1;
+var sDay = 2;
 //var nMonth = 2;
 //var nDay = nMonth * 30;
 
@@ -130,9 +130,9 @@ function CDate(year, month, day) {
         workingDays++;
       }
     }
-    console.log("Holiday Count: " + holiday);
-    console.log("Weekend Count: " + weekend);
-    console.log("Working Day Count: " + workingDays + "(" + workday + ")");
+    //console.log("Holiday Count: " + holiday);
+    //console.log("Weekend Count: " + weekend);
+    //console.log("Working Day Count: " + workingDays + "(" + workday + ")");
     return workingDays;
   }
   
@@ -142,6 +142,7 @@ function CDate(year, month, day) {
   }
 };
 
+//計算30日,60日票價
 function TrainPrice(sCDate) {
   this.sDate = sCDate;
   this.eDate = new Array(0);
@@ -183,10 +184,44 @@ function TrainPrice(sCDate) {
   }
 }
 
+//找出30日 = 22 工作日,60日 = 44 工作日
+function BestDay(sCDate) {
+	this.sDate = sCDate;
+	//this.eDate = new CDate(this.sDate.year, 12, 31);
+	this.eDate = sDate.addDay(100);
+	this.days = this.sDate.countDays(this.eDate);
+	
+	this.find = function() {
+		for (var i = 0; i < this.days; i++) {
+			var sd = this.sDate.addDay(i);
+			
+			var ed60 = sd.addDay(60);
+			var wd60 = sd.countWorkingDays(ed60)
+			if (wd60 > 39) {
+				console.log("Best 60 Day: " + sd.toString() + "- " + wd60);
+			}
+			
+			var ed30 = sd.addDay(30);
+			var wd30 = sd.countWorkingDays(ed30)
+			if (wd30 > 21) {
+				console.log("Best 30 Day: " + sd.toString()  + "- " + wd30);
+			}
+		}
+	}
+}
+
+
 var sDate = new CDate(sYear, sMonth, sDay);
-var trainPrice = new TrainPrice(sDate);
+
+var bestDay = new BestDay(sDate);
+var bDay = bestDay.find();
+
+var bDate = new CDate(sYear, 2, 27);
+var trainPrice = new TrainPrice(bDate);
 trainPrice.calculate();
 trainPrice.print();
+
+
 
 
 
