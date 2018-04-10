@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title> - Debug</title>
+	</head>
+	<body>
+		
+		<div id="btn">
+			Open
+		<div>
+
+		<script src="https://code.jquery.com/jquery-3.2.1.js" 
+			integrity="sha256-DZAnKJ/6XZ9si04Hgrsxu/8s717jcIzLy3oi35EouyE="
+			crossorigin="anonymous"></script>
+		
+		<script>
+		
+		$("#btn").click(function (){
+			//alert('alert');
+			console.log('click');
+			
+			
+			
+		});
+		
+		$(function() {
+			var ary = ['a','b'];
+			var obj = {
+				ary: ['a','b'],
+				pty: null
+			};
+			//alert(obj.ary[0]);
+			console.log(obj);
+			
+			var result = obj.ary[0].a ? true : false;
+			console.log(result);
+			result = obj.ary[0].a != 0 ? true : false;
+			console.log(result);
+			result = obj.ary[0].a == 0 ? true : false;
+			console.log(result);
+			
+			result = obj.ary[0].c ? true : false;
+			console.log(result);
+			
+			result = obj.ary[0].c != 0 ? true : false;
+			console.log(result);
+			
+			if (obj.a)
+			{
+				console.log('obj.a');
+			}
+			if (obj.ary)
+			{
+				console.log('obj.ary');
+				obj.ary.forEach(function(obj) {
+					console.log(obj);
+				});
+			}
+			if (obj.pty)
+			{
+				console.log('obj.pty');
+			}
+			console.log(obj);
+			console.log($(window))
+			if ($(window).opener)
+			{
+				console.log('window.opener');
+			}
+			
+			
+
+			//alert(result);
+		});
+		
+		
+//n.Data.Result[0].AirwayBillLink 
+//	? n.Data.Result.forEach(function(n) {
+//		t.$window.opener 
+//			? t.$window.opener.open(n.AirwayBillLink) 
+//			: t.$window.open(n.AirwayBillLink)
+//	}) 
+//	: (t.$log.info("ShippingOrderService GetEasyParcelShipmentStatus - error:" + n.Data.Remarks),
+//                        t.DialogUtility.Notice(n.ErrorMessage || t.$translate.instant("Order_Common_MsgError")))
+		</script>
+	</body>
+</html>
+

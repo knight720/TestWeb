@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title> - Test AngularJS</title>
+
+	</head>
+	<body>
+
+		<div ng-app='MyApp' ng-controller='MyController as myCtrl' ng-init="myCtrl.Var1 = 0">
+			<p ng-click='myCtrl.Click()'>Click</p>
+		</div>
+
+		<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.6/angular.js"></script>
+		<script>
+			angular.module('MyApp',[]);
+			angular.module('MyApp')
+				.controller('MyController',function($window,$location) {
+				
+					this.Var1 = 1;
+				
+					this.Click = function() {
+						console.log('onClick');
+						console.log($window);
+						//alert('Click!');
+						//this.Var1++;
+						var url = 'http://www.google.com';
+						//new tab
+						$window.open(url);
+						
+						//redriect
+						//$window.location.href = url;
+					};
+				
+				});
+		</script>
+	</body>
+</html>
