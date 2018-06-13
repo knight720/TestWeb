@@ -1,6 +1,6 @@
 var sYear = 2018;
-var sMonth = 1;
-var sDay = 2;
+var sMonth = 4;
+var sDay = 27;
 //var nMonth = 2;
 //var nDay = nMonth * 30;
 
@@ -216,7 +216,7 @@ var sDate = new CDate(sYear, sMonth, sDay);
 var bestDay = new BestDay(sDate);
 var bDay = bestDay.find();
 
-var bDate = new CDate(sYear, 2, 27);
+var bDate = new CDate(sYear, 4, 27);
 var trainPrice = new TrainPrice(bDate);
 trainPrice.calculate();
 trainPrice.print();
