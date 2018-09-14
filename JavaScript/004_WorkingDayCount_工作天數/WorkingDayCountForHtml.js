@@ -14,3 +14,8 @@ function calculate() {
 function printMessage(msg) {
     $(".message").text(msg);
 }
+
+$("#target").submit(function(event) {
+    calculate();
+    //event.preventDefault();
+});
