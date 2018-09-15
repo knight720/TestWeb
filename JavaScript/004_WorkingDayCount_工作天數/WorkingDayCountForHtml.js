@@ -15,7 +15,12 @@ function printMessage(msg) {
     $(".message").text(msg);
 }
 
-$("#target").submit(function(event) {
-    calculate();
+//$("#target").submit(function(event) {
+ //   calculate();
     //event.preventDefault();
+//});
+
+$("#cal").click(function() {
+    calculate();
 });
+
