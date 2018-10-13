@@ -1,0 +1,16 @@
+    #puzzle {
+        height: 500px;
+        width: 500px;
+        background-color: red;
+    }
+    
+    #puzzleTable {
+        height: 100%;
+        text-align: center;
+        font-size: 10vh;
+    }
+    
+    .current {
+        background-color: white;
+        color: white;
+    }
