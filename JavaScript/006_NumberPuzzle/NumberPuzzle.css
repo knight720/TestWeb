@@ -1,16 +1,19 @@
-    #puzzle {
-        height: 500px;
-        width: 500px;
-        background-color: red;
-    }
-    
-    #puzzleTable {
-        height: 100%;
-        text-align: center;
-        font-size: 10vh;
-    }
-    
-    .current {
-        background-color: white;
-        color: white;
-    }
+#container {}
+
+#puzzle {
+    height: 300px;
+    width: 300px;
+    background-color: red;
+}
+
+#puzzleTable {
+    height: 100%;
+    text-align: center;
+    font-size: 10vh;
+    align-self: center;
+}
+
+.current {
+    background-color: white;
+    color: white;
+}
