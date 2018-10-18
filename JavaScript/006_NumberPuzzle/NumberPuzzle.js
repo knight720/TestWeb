@@ -7,6 +7,8 @@ $(function() {
 
     tableCreate();
 
+    isFinish();
+
     window.addEventListener('keydown', function(e) {
         let valid = false;
 
@@ -76,18 +78,19 @@ function tableCreate() {
         tbdy.appendChild(tr);
     }
     tbl.appendChild(tbdy);
-    body.appendChild(tbl)
-}
+    body.appendChild(tbl);
+};
 
 function isFinish() {
+    console.log('valid');
     let valid = true;
     let buttons = document.getElementsByClassName('button');
 
-    buttons.forEach(i => {
-        console.log(i.id);
-        valid = i.innerHTML == i.id;
+    for (let i = 0; i < buttons.length; i++) {
+        let btn = buttons[i];
+        valid = btn.innerHTML == btn.id;
         if (!valid) break;
-    });
+    }
 
     if (valid) alert('Finish!');
-}
+};
