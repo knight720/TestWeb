@@ -94,3 +94,12 @@ function isFinish() {
 
     if (valid) alert('Finish!');
 };
+
+function createArray()
+{
+    let question = [];
+    while (qestion.length < 9) {
+        let value = Math.ceil(Math.random()*9);
+    }
+    
+}

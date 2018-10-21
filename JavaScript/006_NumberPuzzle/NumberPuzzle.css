@@ -1,9 +1,14 @@
-#container {}
+#container {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
 
 #puzzle {
     height: 300px;
     width: 300px;
     background-color: red;
+    margin: auto;
 }
 
 #puzzleTable {
