@@ -1,6 +1,6 @@
 var sYear = 2018;
-var sMonth = 8;
-var sDay = 30;
+var sMonth = 11;
+var sDay = 2;
 //var nMonth = 2;
 //var nDay = nMonth * 30;
 
@@ -30,10 +30,21 @@ holiday.push(new CDate(2018, 6, 18));
 holiday.push(new CDate(2018, 9, 24));
 holiday.push(new CDate(2018, 10, 10));
 holiday.push(new CDate(2018, 12, 31));
+//2019
+holiday.push(new CDate(2019, 1, 1));
+holiday.push(new CDate(2019, 2, 4));
+holiday.push(new CDate(2019, 2, 5));
+holiday.push(new CDate(2019, 2, 6));
+holiday.push(new CDate(2019, 2, 7));
+holiday.push(new CDate(2019, 2, 8));
+holiday.push(new CDate(2019, 2, 28));
 
 var workingDay = new Array(0);
 workingDay.push(new CDate(2018, 3, 31));
 workingDay.push(new CDate(2018, 12, 22));
+//2019
+workingDay.push(new CDate(2019, 1, 19));
+workingDay.push(new CDate(2019, 2, 23));
 
 function CDate(year, month, day) {
     this.year = year;
@@ -216,7 +227,7 @@ var sDate = new CDate(sYear, sMonth, sDay);
 var bestDay = new BestDay(sDate);
 var bDay = bestDay.find();
 
-var bDate = new CDate(sYear, 8, 31);
+var bDate = new CDate(sYear, 11, 2);
 var trainPrice = new TrainPrice(bDate);
 trainPrice.calculate();
 trainPrice.print();
