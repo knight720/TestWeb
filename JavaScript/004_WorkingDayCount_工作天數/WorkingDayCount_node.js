@@ -65,7 +65,7 @@ async function Main() {
         let cdate = new CDate(date[0], date[1], date[2]);
         if (cdate.grateThen(sDate)) {
             holiday.push(cdate);
-            console.log(cdate.toString());
+            //console.log(cdate.toString());
         }
     });
     //console.log(holiday);
@@ -164,7 +164,7 @@ function CDate(year, month, day) {
             var week = iCDay.getWeek();
             //console.log(week);
             if (iCDay.isWorkingDay() == true) {
-                //console.log("Weekend: " + iCDay.toString());
+                //console.log("WorkingDay: " + iCDay.toString());
                 workday++;
                 workingDays++;
             } else if (iCDay.isHoliday() == true) {
@@ -174,6 +174,7 @@ function CDate(year, month, day) {
                 //console.log("Weekend: " + iCDay.toString());
                 weekend++;
             } else {
+                //console.log("Week Work Day: " + iCDay.toString());
                 workingDays++;
             }
         }
@@ -239,7 +240,7 @@ function TrainPrice(sCDate) {
 function BestDay(sCDate) {
     this.sDate = sCDate;
     //this.eDate = new CDate(this.sDate.year, 12, 31);
-    this.eDate = sDate.addDay(100);
+    this.eDate = sDate.addDay(60);
     this.days = this.sDate.countDays(this.eDate);
 
     this.find = function() {
