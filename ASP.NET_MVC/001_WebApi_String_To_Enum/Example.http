@@ -1,0 +1,14 @@
+@host = localhost:63848
+
+###
+GET http://{{host}}/api/values/
+
+###
+POST http://{{host}}/api/values/
+Content-Type: application/json
+
+{
+    "DOW":7,
+    "Value":"Monday",
+    "Text":2,
+}
