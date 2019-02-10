@@ -1,8 +1,8 @@
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
 var sYear = 2019;
-var sMonth = 1;
-var sDay = 1;
+var sMonth = 2;
+var sDay = 10;
 //var nMonth = 2;
 //var nDay = nMonth * 30;
 
@@ -190,7 +190,7 @@ function CDate(year, month, day) {
     }
 
     this.grateThen = function(date) {
-        return this.year >= date.year && this.month >= date.month && this.day >= date.day;
+        return this.toDate() >= date.toDate();
     }
 };
 
