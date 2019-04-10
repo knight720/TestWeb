@@ -1,8 +1,8 @@
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
 var sYear = 2019;
-var sMonth = 2;
-var sDay = 10;
+var sMonth = 4;
+var sDay = 12;
 //var nMonth = 2;
 //var nDay = nMonth * 30;
 
@@ -29,6 +29,8 @@ workingDay.push(new CDate(2018, 12, 22));
 //2019
 workingDay.push(new CDate(2019, 1, 19));
 workingDay.push(new CDate(2019, 2, 23));
+workingDay.push(new CDate(2019, 4, 13));
+workingDay.push(new CDate(2019, 4, 20));
 
 function GetData(url) {
     return new Promise(function (resolve, reject) {
@@ -74,7 +76,7 @@ async function Main() {
     var bestDay = new BestDay(sDate);
     var bDay = bestDay.find();
 
-    var bDate = new CDate(sYear, 1, 1);
+    var bDate = new CDate(sYear, 4, 12);
     var trainPrice = new TrainPrice(bDate);
     trainPrice.calculate();
     trainPrice.print();

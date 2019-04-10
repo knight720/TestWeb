@@ -14,3 +14,6 @@ http://data.ntpc.gov.tw/api/v1/rest/datastore/382000000A-000077-002
 政府行政機關辦公日曆表
 資料資源更新時間: 
 2018/10/18 14:29
+
+--
+npm install --save xmlhttprequest
