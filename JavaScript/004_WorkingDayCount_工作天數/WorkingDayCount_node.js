@@ -1,8 +1,8 @@
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
 var sYear = 2019;
-var sMonth = 4;
-var sDay = 12;
+var sMonth = 6;
+var sDay = 18;
 //var nMonth = 2;
 //var nDay = nMonth * 30;
 
@@ -22,6 +22,9 @@ var towMonthTicketOff = 0.8;
 var holiday = new Array(0);
 //2019
 holiday.push(new CDate(2019, 2, 8));
+holiday.push(new CDate(2019, 7, 1));
+holiday.push(new CDate(2019, 7, 2));
+holiday.push(new CDate(2019, 7, 3));
 
 var workingDay = new Array(0);
 workingDay.push(new CDate(2018, 3, 31));
@@ -76,7 +79,7 @@ async function Main() {
     var bestDay = new BestDay(sDate);
     var bDay = bestDay.find();
 
-    var bDate = new CDate(sYear, 4, 12);
+    var bDate = new CDate(sYear, 7, 4);
     var trainPrice = new TrainPrice(bDate);
     trainPrice.calculate();
     trainPrice.print();
@@ -251,7 +254,7 @@ function BestDay(sCDate) {
 
             var ed60 = sd.addDay(60);
             var wd60 = sd.countWorkingDays(ed60)
-            if (wd60 > 39) {
+            if (wd60 > 41) {
                 console.log("Best 60 Day: " + sd.toString() + "- " + wd60);
             }
 
