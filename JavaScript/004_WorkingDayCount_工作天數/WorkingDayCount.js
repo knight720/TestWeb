@@ -1,5 +1,5 @@
-var sYear = 2018;
-var sMonth = 11;
+var sYear = 2019;
+var sMonth = 9;
 var sDay = 2;
 //var nMonth = 2;
 //var nDay = nMonth * 30;
@@ -16,21 +16,6 @@ var oneMonthTicketOff = 0.85;
 var towMonthTicketOff = 0.8;
 
 var holiday = new Array(0);
-holiday.push(new CDate(2018, 1, 1));
-holiday.push(new CDate(2018, 2, 15));
-holiday.push(new CDate(2018, 2, 16));
-holiday.push(new CDate(2018, 2, 19));
-holiday.push(new CDate(2018, 2, 20));
-holiday.push(new CDate(2018, 2, 28));
-holiday.push(new CDate(2018, 4, 4));
-holiday.push(new CDate(2018, 4, 5));
-holiday.push(new CDate(2018, 4, 6));
-holiday.push(new CDate(2018, 5, 1));
-holiday.push(new CDate(2018, 6, 18));
-holiday.push(new CDate(2018, 9, 24));
-holiday.push(new CDate(2018, 10, 10));
-holiday.push(new CDate(2018, 12, 31));
-//2019
 holiday.push(new CDate(2019, 1, 1));
 holiday.push(new CDate(2019, 2, 4));
 holiday.push(new CDate(2019, 2, 5));
@@ -38,13 +23,14 @@ holiday.push(new CDate(2019, 2, 6));
 holiday.push(new CDate(2019, 2, 7));
 holiday.push(new CDate(2019, 2, 8));
 holiday.push(new CDate(2019, 2, 28));
+holiday.push(new CDate(2019, 9, 13));
+holiday.push(new CDate(2019, 10, 10));
+holiday.push(new CDate(2019, 10, 11));
 
 var workingDay = new Array(0);
-workingDay.push(new CDate(2018, 3, 31));
-workingDay.push(new CDate(2018, 12, 22));
-//2019
 workingDay.push(new CDate(2019, 1, 19));
 workingDay.push(new CDate(2019, 2, 23));
+workingDay.push(new CDate(2019, 10, 5));
 
 function CDate(year, month, day) {
     this.year = year;
@@ -221,13 +207,12 @@ function BestDay(sCDate) {
     }
 }
 
-
 var sDate = new CDate(sYear, sMonth, sDay);
 
 var bestDay = new BestDay(sDate);
 var bDay = bestDay.find();
 
-var bDate = new CDate(sYear, 11, 2);
+var bDate = new CDate(sYear, 9, 2);
 var trainPrice = new TrainPrice(bDate);
 trainPrice.calculate();
 trainPrice.print();
