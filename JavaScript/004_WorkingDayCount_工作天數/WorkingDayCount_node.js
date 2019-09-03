@@ -1,13 +1,15 @@
 var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 
-var sYear = 2019;
-var sMonth = 6;
-var sDay = 18;
+var today = new Date();
+var sYear = today.getFullYear();
+var sMonth = today.getMonth() + 1;
+var sDay = today.getDate();
 //var nMonth = 2;
 //var nDay = nMonth * 30;
 
 //// calculate
 var sDate = new CDate(sYear, sMonth, sDay);
+//console.log(sDate);
 
 //		30d		60d
 // WD	22		44
@@ -63,9 +65,10 @@ function GetData(url) {
 }
 
 async function Main() {
-    let result = await GetData('http://data.ntpc.gov.tw/api/v1/rest/datastore/382000000A-000077-002');
+    let result = await GetData('https://data.ntpc.gov.tw/od/data/api/7B7A8FD9-2722-4F17-B515-849E00073865?$format=json');
     let data = JSON.parse(result);
-    data.result.records.forEach(i => {
+    //console.log(data);
+    data.forEach(i => {
         let date = i.date.split("/");
         let cdate = new CDate(date[0], date[1], date[2]);
         if (cdate.grateThen(sDate)) {
@@ -255,13 +258,13 @@ function BestDay(sCDate) {
             var ed60 = sd.addDay(60);
             var wd60 = sd.countWorkingDays(ed60)
             if (wd60 > 41) {
-                console.log("Best 60 Day: " + sd.toString() + "- " + wd60);
+                console.log("Best 60 Day: " + sd.toString() + " - " + wd60);
             }
 
             var ed30 = sd.addDay(30);
             var wd30 = sd.countWorkingDays(ed30)
             if (wd30 > 21) {
-                console.log("Best 30 Day: " + sd.toString() + "- " + wd30);
+                console.log("Best 30 Day: " + sd.toString() + " - " + wd30);
             }
         }
     }

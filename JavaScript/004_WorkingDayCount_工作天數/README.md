@@ -15,5 +15,11 @@ http://data.ntpc.gov.tw/api/v1/rest/datastore/382000000A-000077-002
 資料資源更新時間: 
 2018/10/18 14:29
 
+## 20190903
+描述
+https://data.ntpc.gov.tw/od/detail?oid=308DCD75-6434-45BC-A95F-584DA4FED251
+API
+https://data.ntpc.gov.tw/od/data/api/7B7A8FD9-2722-4F17-B515-849E00073865?$format=json
+
 --
 npm install --save xmlhttprequest
