@@ -36,6 +36,7 @@ workingDay.push(new CDate(2019, 1, 19));
 workingDay.push(new CDate(2019, 2, 23));
 workingDay.push(new CDate(2019, 4, 13));
 workingDay.push(new CDate(2019, 4, 20));
+workingDay.push(new CDate(2019, 10, 5));
 
 function GetData(url) {
     return new Promise(function (resolve, reject) {
