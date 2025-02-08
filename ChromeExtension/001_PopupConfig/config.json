@@ -1,0 +1,7 @@
+{
+  "settings": [
+    { "id": "setting1", "name": "Setting 1", "checked": false },
+    { "id": "setting2", "name": "Setting 2", "checked": false },
+    { "id": "setting3", "name": "Setting 3", "checked": false }
+  ]
+}
