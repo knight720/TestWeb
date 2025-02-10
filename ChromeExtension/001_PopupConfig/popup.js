@@ -51,16 +51,4 @@ document.addEventListener('DOMContentLoaded', async function () {
       console.log('Settings saved');
     });
   });
-
-  // Load saved settings from Chrome storage
-  chrome.storage.sync.get('settings', (data) => {
-    if (data.settings) {
-      data.settings.forEach(savedSetting => {
-        const checkbox = document.getElementById(savedSetting.id);
-        if (checkbox) {
-          checkbox.checked = savedSetting.checked;
-        }
-      });
-    }
-  });
 });
