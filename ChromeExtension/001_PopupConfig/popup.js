@@ -1,12 +1,25 @@
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
   const settingsContainer = document.getElementById('settings');
   const saveButton = document.getElementById('save');
 
   // Load settings from config.json
-  fetch('config.json')
-    .then(response => response.json())
-    .then(data => {
-      data.settings.forEach(setting => {
+  try {
+    const response = await fetch('config.json');
+    const configSetting = await response.json();
+
+    // 取得 storage 內的設定值覆蓋 data.settings 內的設定值
+    chrome.storage.sync.get('settings', (storageSetting) => {
+      if (storageSetting.settings) {
+        configSetting.settings = configSetting.settings.map(config => {
+          const matchSetting = storageSetting.settings.find(storage => storage.id === config.id);
+          if (matchSetting) {
+            config.checked = matchSetting.checked;
+          }
+          return config;
+        });
+      }
+      // 將選項新增到頁面
+      configSetting.settings.forEach(setting => {
         const div = document.createElement('div');
         div.className = 'setting';
         const checkbox = document.createElement('input');
@@ -21,6 +34,9 @@ document.addEventListener('DOMContentLoaded', function () {
         settingsContainer.appendChild(div);
       });
     });
+  } catch (error) {
+    console.error('Error loading config.json:', error);
+  }
 
   // Save settings to Chrome storage
   saveButton.addEventListener('click', () => {
