@@ -3,6 +3,7 @@ var _Context = _Canvas.getContext('2d');
 var information = document.getElementById('info');
 
 _Canvas.addEventListener('mousemove', onMouseMove, false);
+_Canvas.addEventListener('wheel', onMouseWheel, { passive: false });
 _Canvas.addEventListener('mousewheel', onMouseWheel, false);
 _Canvas.addEventListener('mousedown', onMouseDown, false);
 
@@ -19,7 +20,17 @@ function onMouseMove(e) {
 }
 
 function onMouseWheel(e) {
-  _Frame.Move(e.wheelDelta/120);
+  var delta = 0;
+  if (typeof e.deltaY === 'number') {
+    delta = -e.deltaY / 100;
+  } else if (typeof e.wheelDelta === 'number') {
+    delta = e.wheelDelta / 120;
+  }
+
+  _Frame.Move(delta);
+  if (e.preventDefault) {
+    e.preventDefault();
+  }
 }
 
 function onMouseDown(e) {
@@ -162,7 +173,7 @@ function Frame(w,h,d) {
 
 function Bullet() {
   var Colors = new Array("Red","Orange","Yellow","Green","Blue","Indigo","Purple");
-  this.Color = Colors[Math.round(Math.random()*Colors.length-1)];
+  this.Color = Colors[Math.floor(Math.random() * Colors.length)];
   //this.X = 200;
   //this.Y = 200;
   this.X = Math.round(Math.random()*_Canvas.width);
@@ -228,15 +239,9 @@ function BulletManager() {
   }
   
   this.Sort = function() {
-    for (var i=0; i< ary.length - 1;i++)
-    {
-      if (ary[i].Z < ary[i+1].Z)
-      {
-        var temp = ary[i];
-        ary[i] = ary[i+1];
-        ary[i+1] = temp;
-      }
-    }
+    ary.sort(function(a, b) {
+      return b.Z - a.Z;
+    });
   };
   
   this.Draw = function(context) {
