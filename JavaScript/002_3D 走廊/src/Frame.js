@@ -13,6 +13,7 @@ class Frame {
     // wallX/wallY are set each draw() call and shared with d3ToD2()
     this.wallX = 0;
     this.wallY = 0;
+    this.wall = new Wall(w, h, this);
     this._updateWallScale();
   }
 

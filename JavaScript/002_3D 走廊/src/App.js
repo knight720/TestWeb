@@ -22,6 +22,14 @@ const App = (() => {
     info.value = `Z: ${frame.z.toFixed(2)}`;
   }
 
+  function drawScene(ctx) {
+    // Merge wall + bullets, sort far-to-near (painter's algorithm)
+    // so nearer objects correctly occlude farther ones
+    const objects = [frame.wall, ...bulletManager.bullets];
+    objects.sort((a, b) => b.z - a.z);
+    objects.forEach(obj => obj.draw(ctx));
+  }
+
   function gameLoop(timestamp) {
     const dt = lastTimestamp !== null ? (timestamp - lastTimestamp) / 1000 : 1 / 60;
     lastTimestamp = timestamp;
@@ -34,7 +42,7 @@ const App = (() => {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     frame.draw(ctx);
-    bulletManager.draw(ctx);
+    drawScene(ctx);
 
     requestAnimationFrame(gameLoop);
   }
