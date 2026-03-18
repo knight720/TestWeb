@@ -1,0 +1,74 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #0a0a12;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── UI bar ── */
+
+#ui {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 14px;
+  height: 36px;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.title {
+  color: #00ffff;
+  font-family: monospace;
+  font-size: clamp(0.65rem, 2vmin, 1rem);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-shadow: 0 0 8px #00ffff;
+}
+
+.hint {
+  color: #00ffff;
+  font-family: monospace;
+  font-size: clamp(0.6rem, 1.5vmin, 0.8rem);
+  letter-spacing: 2px;
+  opacity: 0.4;
+  flex: 1;
+}
+
+textarea {
+  background: transparent;
+  color: #00ffff99;
+  border: 1px solid #00ffff33;
+  font-family: monospace;
+  font-size: clamp(0.6rem, 1.5vmin, 0.75rem);
+  padding: 2px 6px;
+  resize: none;
+  outline: none;
+}
+
+/* ── Canvas wrapper ── */
+
+#wrapper {
+  /* Square: fill shorter dimension minus the UI bar height */
+  width: min(100vw, calc(100vh - 36px));
+  height: min(100vw, calc(100vh - 36px));
+  flex-shrink: 0;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #00ffff;
+  box-shadow: 0 0 24px #00ffff55;
+}
