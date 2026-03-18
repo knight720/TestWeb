@@ -1,5 +1,46 @@
-canvas
-{
-  border-style:solid;
-  border-width:2px;
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #0a0a12;
+  color: #00ffff;
+  font-family: monospace;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+}
+
+.title {
+  font-size: 1.2rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px #00ffff;
+}
+
+canvas {
+  border: 2px solid #00ffff;
+  box-shadow: 0 0 24px #00ffff55;
+  display: block;
+}
+
+.hint {
+  font-size: 0.75rem;
+  opacity: 0.5;
+  letter-spacing: 2px;
+}
+
+textarea {
+  background: transparent;
+  color: #00ffff99;
+  border: 1px solid #00ffff33;
+  font-family: monospace;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  resize: none;
+  outline: none;
 }
