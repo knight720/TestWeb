@@ -29,7 +29,7 @@ class Frame {
   }
 
   move(value) {
-    this.z = Math.max(0, Math.min(6, this.z + value));
+    this.z = Math.max(0, Math.min(this.depth * 0.8, this.z + value));
     this._updateWallScale();
   }
 
