@@ -1,10 +1,10 @@
-class Wall {
+class Wall extends Shape {
   static COLORS = ['lime', '#00aaff', '#ff6600', '#ff0055', '#aa00ff', '#ffcc00'];
 
   constructor(canvasWidth, canvasHeight, frame) {
+    super(frame);
     this.canvasWidth  = canvasWidth;
     this.canvasHeight = canvasHeight;
-    this.frame        = frame;
     this._randomize();
   }
 
@@ -27,14 +27,16 @@ class Wall {
     this._randomize();
   }
 
-  draw(ctx) {
-    if (this.z < this.frame.z) return;
+  // Wall is static — no position update needed
+  move(dt) {}
 
-    // Project all 4 corners via perspective
-    const tl = this.frame.d3ToD2(this.x,          this.y,          this.z);
-    const tr = this.frame.d3ToD2(this.x + this.w,  this.y,          this.z);
-    const br = this.frame.d3ToD2(this.x + this.w,  this.y + this.h, this.z);
-    const bl = this.frame.d3ToD2(this.x,           this.y + this.h, this.z);
+  draw(ctx) {
+    if (!this.isVisible()) return;
+
+    const tl = this.project(this.x,          this.y         );
+    const tr = this.project(this.x + this.w,  this.y         );
+    const br = this.project(this.x + this.w,  this.y + this.h);
+    const bl = this.project(this.x,           this.y + this.h);
 
     ctx.save();
 
@@ -48,10 +50,11 @@ class Wall {
     ctx.fill();
 
     ctx.strokeStyle = 'black';
-    ctx.lineWidth = 1;
-    ctx.lineJoin = 'round';
+    ctx.lineWidth   = 1;
+    ctx.lineJoin    = 'round';
     ctx.stroke();
 
     ctx.restore();
   }
 }
+

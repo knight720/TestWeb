@@ -1,16 +1,16 @@
-const BULLET_COLORS = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Indigo', 'Purple'];
+class Bullet extends Shape {
+  static COLORS = ['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Indigo', 'Purple'];
 
-class Bullet {
   constructor(canvasWidth, canvasHeight, frame) {
-    this.canvasWidth = canvasWidth;
+    super(frame);
+    this.canvasWidth  = canvasWidth;
     this.canvasHeight = canvasHeight;
-    this.frame = frame;
     this.size = 20;
     this._reset();
   }
 
   _reset() {
-    this.color = BULLET_COLORS[Math.floor(Math.random() * BULLET_COLORS.length)];
+    this.color = Bullet.COLORS[Math.floor(Math.random() * Bullet.COLORS.length)];
     this.x = Math.random() * this.canvasWidth;
     this.y = Math.random() * this.canvasHeight;
     this.z = this.frame.depth;
@@ -24,16 +24,16 @@ class Bullet {
   }
 
   draw(ctx) {
-    if (this.z < this.frame.z) return;
-    const pos = this.frame.d3ToD2(this.x, this.y, this.z);
-    const scale = this.frame.getScale(this.z);
+    if (!this.isVisible()) return;
+    const pos = this.project(this.x, this.y);
+    const s   = this.scale();
 
     ctx.save();
-    ctx.fillStyle = this.color;
+    ctx.fillStyle   = this.color;
     ctx.shadowColor = this.color;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur  = 12;
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, this.size * scale, 0, 2 * Math.PI);
+    ctx.arc(pos.x, pos.y, this.size * s, 0, 2 * Math.PI);
     ctx.fill();
     ctx.restore();
   }

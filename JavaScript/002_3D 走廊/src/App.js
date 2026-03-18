@@ -3,8 +3,8 @@ const App = (() => {
   const ctx = canvas.getContext('2d');
   const info = document.getElementById('info');
 
-  const frame = new Frame(canvas.width, canvas.height, 25);
-  const bulletManager = new BulletManager(10, canvas.width, canvas.height, frame);
+  const frame        = new Frame(canvas.width, canvas.height, 25);
+  const shapeManager = new ShapeManager(canvas.width, canvas.height, frame);
 
   const mouse = { x: frame.centerX, y: frame.centerY };
   let lastTimestamp = null;
@@ -22,27 +22,18 @@ const App = (() => {
     info.value = `Z: ${frame.z.toFixed(2)}`;
   }
 
-  function drawScene(ctx) {
-    // Merge wall + bullets, sort far-to-near (painter's algorithm)
-    // so nearer objects correctly occlude farther ones
-    const objects = [frame.wall, ...bulletManager.bullets];
-    objects.sort((a, b) => b.z - a.z);
-    objects.forEach(obj => obj.draw(ctx));
-  }
-
   function gameLoop(timestamp) {
     const dt = lastTimestamp !== null ? (timestamp - lastTimestamp) / 1000 : 1 / 60;
     lastTimestamp = timestamp;
 
     frame.updateMouse(mouse.x, mouse.y);
-    bulletManager.move(dt);
+    shapeManager.move(dt);
 
-    // Dark background instead of clearRect for subtle trail feel
     ctx.fillStyle = '#000010';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     frame.draw(ctx);
-    drawScene(ctx);
+    shapeManager.draw(ctx);
 
     requestAnimationFrame(gameLoop);
   }
