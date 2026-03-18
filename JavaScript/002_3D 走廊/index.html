@@ -7,10 +7,14 @@
 	<link rel="stylesheet" href="style.css" />
 </head>
 <body>
-	<p class="title">3D Corridor</p>
-	<canvas id="myCanvas" width="400" height="400"></canvas>
-	<p class="hint">Move And Scroll Mouse</p>
-	<textarea id="info" rows="2" cols="20" readonly></textarea>
+	<div id="ui">
+		<span class="title">3D Corridor</span>
+		<span class="hint">Move &amp; Scroll Mouse</span>
+		<textarea id="info" rows="1" cols="12" readonly></textarea>
+	</div>
+	<div id="wrapper">
+		<canvas id="myCanvas" width="400" height="400"></canvas>
+	</div>
 
 	<script src="src/Shape.js"></script>
 	<script src="src/Point.js"></script>
@@ -22,3 +26,4 @@
 	<script src="src/App.js"></script>
 </body>
 </html>
+
