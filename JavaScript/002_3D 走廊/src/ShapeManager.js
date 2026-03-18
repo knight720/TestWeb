@@ -1,8 +1,18 @@
 class ShapeManager {
-  constructor(canvasWidth, canvasHeight, frame, bulletCount = 10, wallCount = 1) {
+  constructor(canvasWidth, canvasHeight, frame, {
+    pointCount    = 8,
+    lineCount     = 4,
+    rectCount     = 2,
+    triangleCount = 2,
+  } = {}) {
+    const make = (Cls, n) =>
+      Array.from({ length: n }, () => new Cls(canvasWidth, canvasHeight, frame));
+
     this.shapes = [
-      ...Array.from({ length: bulletCount }, () => new Bullet(canvasWidth, canvasHeight, frame)),
-      ...Array.from({ length: wallCount   }, () => new Wall  (canvasWidth, canvasHeight, frame)),
+      ...make(Point,    pointCount),
+      ...make(Line,     lineCount),
+      ...make(Rect,     rectCount),
+      ...make(Triangle, triangleCount),
     ];
   }
 
