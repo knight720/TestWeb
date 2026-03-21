@@ -3,7 +3,8 @@ const App = (() => {
   const ctx    = canvas.getContext('2d');
   const info   = document.getElementById('info');
 
-  const cube = new Cube(canvas.width, canvas.height);
+  const cube    = new Cube(canvas.width, canvas.height);
+  const frustum = new Frustum(canvas.width, canvas.height, cube.maxZ);
   let lastTimestamp = null;
 
   function gameLoop(timestamp) {
@@ -16,6 +17,7 @@ const App = (() => {
     ctx.fillStyle = '#000010';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+    frustum.draw(ctx);
     cube.draw(ctx);
 
     requestAnimationFrame(gameLoop);
