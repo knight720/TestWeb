@@ -31,7 +31,7 @@ class Tetromino {
    * @param {number} maxZ  走廊最大深度
    * @param {number} speed 世界單位 / 秒
    */
-  constructor(camera, maxZ = 10, speed = 3) {
+  constructor(camera, maxZ = 10, speed = 1.5) {
     this.camera   = camera;
     this.halfSize = 0.5;
     this.maxZ     = maxZ;
