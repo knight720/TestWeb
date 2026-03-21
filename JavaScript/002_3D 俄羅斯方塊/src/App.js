@@ -1,10 +1,22 @@
+/**
+ * App — 主迴圈與輸入
+ *
+ * 職責：
+ *   - 建立所有物件（Camera、Tetromino、Frustum、TetrominoRenderer）
+ *   - requestAnimationFrame 遊戲迴圈
+ *   - 鍵盤輸入處理
+ *   - UI 資訊更新
+ */
 const App = (() => {
   const canvas = document.getElementById('myCanvas');
   const ctx    = canvas.getContext('2d');
   const info   = document.getElementById('info');
 
-  const tetromino = new Tetromino(canvas.width, canvas.height);
-  const frustum   = new Frustum(canvas.width, canvas.height, tetromino.maxZ);
+  const camera   = new Camera(canvas.width, canvas.height);
+  const tetromino = new Tetromino(camera);
+  const frustum  = new Frustum(camera, tetromino.maxZ);
+  const renderer = new TetrominoRenderer(camera);
+
   let lastTimestamp = null;
 
   function gameLoop(timestamp) {
@@ -18,7 +30,8 @@ const App = (() => {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     frustum.draw(ctx);
-    tetromino.draw(ctx);
+    renderer.drawWallShadows(ctx, tetromino);
+    renderer.draw(ctx, tetromino);
 
     requestAnimationFrame(gameLoop);
   }

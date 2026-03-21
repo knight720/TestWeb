@@ -1,43 +1,47 @@
-// 相機：管理鏡頭狀態，計算並快取投影所需的衍生值
+/**
+ * Camera — 透視相機
+ *
+ * 唯一持有透視參數的地方，提供所有投影相關的純計算方法。
+ * 其他模組一律透過 Camera 實例進行投影，不得自行硬編 FOCAL / UNIT_SCALE。
+ */
 class Camera {
-  constructor(w, h, depth, maxScale = 0.4) {
-    this.width    = w;
-    this.height   = h;
-    this.depth    = depth;
-    this.maxScale = maxScale;
-    this.z        = 0;
+  /** 相機焦距（世界單位）；相機位於 Z = -FOCAL */
+  static FOCAL      = 5;
+  /** 參考平面 (Z=0) 上每個世界單位對應的畫素數 */
+  static UNIT_SCALE = 150;
 
-    // 消失點（視覺上走廊線條的收斂點），預設畫布中心
-    this.vpX = w / 2;
-    this.vpY = h / 2;
-
-    // 衍生快取：由 _update() 維護，保證隨時一致
-    this.wallScale = maxScale;
-    this.wallX     = 0;
-    this.wallY     = 0;
-
-    this._update();
+  constructor(canvasW, canvasH) {
+    this.cx = canvasW / 2;
+    this.cy = canvasH / 2;
+    this.w  = canvasW;
+    this.h  = canvasH;
   }
 
-  // 根據滑鼠位置更新消失點（鏡像於畫布中心）
-  setVanishingPoint(mouseX, mouseY) {
-    this.vpX = this.width  - mouseX;
-    this.vpY = this.height - mouseY;
-    this._update();
+  /** 深度 z 的透視縮放比：s = FOCAL / (z + FOCAL) */
+  scaleAt(z) {
+    return Camera.FOCAL / (z + Camera.FOCAL);
   }
 
-  // 前進 / 後退（滾輪）
-  move(value) {
-    this.z = Math.max(0, Math.min(this.depth * 0.8, this.z + value));
-    this._update();
+  /**
+   * 3D 世界座標 → 2D 畫布座標。
+   * 若點位在相機後方（z + FOCAL <= 0）回傳 null。
+   */
+  project(vx, vy, vz) {
+    const dz = vz + Camera.FOCAL;
+    if (dz <= 0) return null;
+    const s = Camera.FOCAL / dz;
+    return {
+      x: this.cx + vx * Camera.UNIT_SCALE * s,
+      y: this.cy + vy * Camera.UNIT_SCALE * s,
+    };
   }
 
-  // 同步所有衍生快取值，每次狀態改變後呼叫
-  _update() {
-    this.wallScale = this.maxScale + (1 - this.maxScale) * this.z / this.depth;
-    const w2    = (this.width  * this.wallScale) / 2;
-    const h2    = (this.height * this.wallScale) / 2;
-    this.wallX  = this.vpX - w2;
-    this.wallY  = this.vpY - h2;
+  /**
+   * 深度 z 的視錐半寬（世界單位）。
+   * 此寬度投影後剛好對應畫布邊緣（cx pixels）。
+   *   frustumHalf = cx * (z + FOCAL) / (UNIT_SCALE * FOCAL)
+   */
+  frustumHalfAt(z) {
+    return this.cx * (z + Camera.FOCAL) / (Camera.UNIT_SCALE * Camera.FOCAL);
   }
 }

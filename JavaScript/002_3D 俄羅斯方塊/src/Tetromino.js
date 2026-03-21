@@ -1,14 +1,20 @@
+/**
+ * Tetromino — 方塊遊戲邏輯
+ *
+ * 職責：
+ *   - 形狀資料定義（SHAPES）
+ *   - 遊戲狀態：wx, wy, cz, shape
+ *   - 移動 / 重生
+ *   - 視錐邊界夾緊（依賴 Camera）
+ *
+ * 不含任何渲染邏輯，由 TetrominoRenderer 負責繪製。
+ */
 class Tetromino {
   /**
-   * 七種 Tetris 方塊形狀。
-   * offsets: 各子方塊中心相對於整體中心的 (dx, dy) 世界單位偏移。
-   * 視覺化（Y 向下為正）：
+   * 七種形狀。offsets: 子方塊中心相對整體中心的 (dx, dy) 世界單位偏移。
    *
-   *  I  ████           O  ██           T  ███          S  .██
-   *                       ██              █                ██.
-   *
-   *  Z  ██.            L  ███          J  ███
-   *     .██               █..             ..█
+   *  I  ████   O  ██   T  ███   S  .██   Z  ██.   L  ███   J  ███
+   *               ██      █        ██.      .██      █..      ..█
    */
   static SHAPES = [
     { name: 'I', color: '#2563eb', offsets: [[-1.5,0],[-0.5,0],[0.5,0],[1.5,0]] },
@@ -20,41 +26,37 @@ class Tetromino {
     { name: 'J', color: '#be185d', offsets: [[-1,0],[0,0],[1,0],[-1,1]] },
   ];
 
-  static EDGES = [
-    [0,1],[1,2],[2,3],[3,0],  // 前面
-    [4,5],[5,6],[6,7],[7,4],  // 後面
-    [0,4],[1,5],[2,6],[3,7],  // 連接邊
-  ];
-
-  constructor(canvasW, canvasH) {
-    this.cx       = canvasW / 2;
-    this.cy       = canvasH / 2;
+  /**
+   * @param {Camera} camera
+   * @param {number} maxZ  走廊最大深度
+   * @param {number} speed 世界單位 / 秒
+   */
+  constructor(camera, maxZ = 10, speed = 3) {
+    this.camera   = camera;
     this.halfSize = 0.5;
-    this.maxZ     = 10;
-    this.speed    = 3;   // 世界單位/秒
-    this.wx       = 0;
-    this.wy       = 0;
-    this.cz       = this.maxZ;
-    this.shape    = Tetromino.SHAPES[0];
-    this._spawn();
+    this.maxZ     = maxZ;
+    this.speed    = speed;
+
+    this.wx    = 0;
+    this.wy    = 0;
+    this.cz    = 0;
+    this.shape = Tetromino.SHAPES[0];
+    this.spawn();
   }
 
-  // ── 生成 ──────────────────────────────────────────────────────────
+  // ── 生成 ────────────────────────────────────────────────────────
 
-  _spawn() {
+  spawn() {
     const idx  = Math.floor(Math.random() * Tetromino.SHAPES.length);
     this.shape = Tetromino.SHAPES[idx];
-    this.cz    = 0;   // 從靠近鏡頭端出發
+    this.cz    = 0;
     this.wx    = 0;
     this.wy    = 0;
   }
 
-  // ── 邊界計算 ──────────────────────────────────────────────────────
+  // ── 邊界計算 ────────────────────────────────────────────────────
 
-  /**
-   * 此形狀各子方塊距整體中心的最大偏移（含半方塊寬），
-   * 分 X / Y 軸計算，以支援 I 型等不對稱形狀。
-   */
+  /** 形狀在 X/Y 軸的最大外輪廓偏移（含半方塊寬） */
   _shapeExtent() {
     let mx = 0, my = 0;
     for (const [dx, dy] of this.shape.offsets) {
@@ -65,14 +67,13 @@ class Tetromino {
   }
 
   /**
-   * 整體中心 (wx, wy) 在目前深度下的合法移動範圍。
+   * 依目前深度，計算整體中心 (wx, wy) 的合法移動範圍。
    * 以最近面 (cz - halfSize) 的視錐半寬扣除形狀外輪廓，
-   * 確保所有子方塊邊緣皆落在投影空間內。
-   *   frustumHalf(z) = cx * (z + FOCAL) / (UNIT_SCALE * FOCAL)
+   * 確保所有子方塊邊緣皆落在視錐內。
    */
-  _xyBound() {
-    const nearZ = this.cz - this.halfSize;
-    const fh    = this.cx * (nearZ + Cube.FOCAL) / (Cube.UNIT_SCALE * Cube.FOCAL);
+  xyBound() {
+    const nearZ = Math.max(0, this.cz - this.halfSize);
+    const fh    = this.camera.frustumHalfAt(nearZ);
     const ext   = this._shapeExtent();
     return {
       x: Math.max(0, fh - ext.x),
@@ -80,73 +81,28 @@ class Tetromino {
     };
   }
 
-  _clampXY() {
-    const { x: bx, y: by } = this._xyBound();
+  clampXY() {
+    const { x: bx, y: by } = this.xyBound();
     this.wx = Math.max(-bx, Math.min(bx, this.wx));
     this.wy = Math.max(-by, Math.min(by, this.wy));
   }
 
-  // ── 更新 ──────────────────────────────────────────────────────────
+  // ── 更新 ────────────────────────────────────────────────────────
 
-  /** 鍵盤方向控制，每次一個世界單位 */
+  /** 鍵盤方向控制：每次一個世界單位，並夾緊至視錐邊界 */
   moveXY(dx, dy) {
     this.wx += dx;
     this.wy += dy;
-    this._clampXY();
+    this.clampXY();
   }
 
-  /** 每幀遠離鏡頭；抵達遠端後隨機生成下一塊 */
+  /** 每幀遠離鏡頭；抵達遠端後重生下一塊 */
   move(dt) {
     this.cz += this.speed * dt;
     if (this.cz > this.maxZ) {
-      this._spawn();
+      this.spawn();
     } else {
-      this._clampXY();
+      this.clampXY();
     }
-  }
-
-  // ── 渲染 ──────────────────────────────────────────────────────────
-
-  _project(vx, vy, vz) {
-    const dz = vz + Cube.FOCAL;
-    if (dz <= 0) return null;
-    const s = Cube.FOCAL / dz;
-    return {
-      x: this.cx + vx * Cube.UNIT_SCALE * s,
-      y: this.cy + vy * Cube.UNIT_SCALE * s,
-    };
-  }
-
-  draw(ctx) {
-    const h = this.halfSize;
-    ctx.save();
-    ctx.strokeStyle = this.shape.color;
-    ctx.lineWidth   = 2;
-    ctx.lineJoin    = 'round';
-    ctx.shadowColor = this.shape.color;
-    ctx.shadowBlur  = 10;
-    ctx.beginPath();
-
-    for (const [dx, dy] of this.shape.offsets) {
-      const bx = this.wx + dx;
-      const by = this.wy + dy;
-      const bz = this.cz;
-
-      // 8 頂點（前面 0-3，後面 4-7）
-      const V = [
-        [bx-h, by-h, bz-h], [bx+h, by-h, bz-h], [bx+h, by+h, bz-h], [bx-h, by+h, bz-h],
-        [bx-h, by-h, bz+h], [bx+h, by-h, bz+h], [bx+h, by+h, bz+h], [bx-h, by+h, bz+h],
-      ];
-      const P = V.map(([vx, vy, vz]) => this._project(vx, vy, vz));
-
-      for (const [a, b] of Tetromino.EDGES) {
-        if (!P[a] || !P[b]) continue;
-        ctx.moveTo(P[a].x, P[a].y);
-        ctx.lineTo(P[b].x, P[b].y);
-      }
-    }
-
-    ctx.stroke();
-    ctx.restore();
   }
 }
