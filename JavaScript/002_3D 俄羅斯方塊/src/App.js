@@ -24,7 +24,20 @@ const App = (() => {
   }
 
   function init() {
+    window.addEventListener('keydown', onKeyDown);
     requestAnimationFrame(gameLoop);
+  }
+
+  function onKeyDown(e) {
+    const STEP = 1; // 每次移動一個世界單位
+    switch (e.key) {
+      case 'ArrowUp':    cube.moveXY( 0, -STEP); break;
+      case 'ArrowDown':  cube.moveXY( 0,  STEP); break;
+      case 'ArrowLeft':  cube.moveXY(-STEP,  0); break;
+      case 'ArrowRight': cube.moveXY( STEP,  0); break;
+      default: return;
+    }
+    e.preventDefault(); // 避免觸發頁面捲動
   }
 
   return { init };

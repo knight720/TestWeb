@@ -15,9 +15,37 @@ class Cube {
     this.cx       = canvasW / 2;
     this.cy       = canvasH / 2;
     this.halfSize = 0.5;   // 1-unit cube (half-size in each axis)
+    this.wx       = 0;     // cube centre X in world space
+    this.wy       = 0;     // cube centre Y in world space
     this.cz       = 0;     // cube centre Z, starts at near end
     this.maxZ     = 10;    // depth limit
     this.speed    = 2;     // world units per second
+  }
+
+  /** 以鍵盤方向移動 cube 的世界座標（X/Y 軸），並夾緊至投影空間 */
+  moveXY(dx, dy) {
+    this.wx += dx;
+    this.wy += dy;
+    this._clampXY();
+  }
+
+  /**
+   * 計算當前深度下，cube 中心在 X/Y 軸可移動的最大世界單位距離。
+   * 以 cube 最近面（z = cz - halfSize）的視錐半寬為基準，
+   * 再扣除 halfSize，確保整個 cube 都在視錐內。
+   *   frustumHalf(z) = cx * (z + FOCAL) / (UNIT_SCALE * FOCAL)
+   */
+  _xyBound() {
+    const nearZ      = this.cz - this.halfSize;
+    const frustumHalf = this.cx * (nearZ + Cube.FOCAL) / (Cube.UNIT_SCALE * Cube.FOCAL);
+    return Math.max(0, frustumHalf - this.halfSize);
+  }
+
+  /** 將 wx / wy 夾緊至目前深度的合法範圍 */
+  _clampXY() {
+    const b  = this._xyBound();
+    this.wx  = Math.max(-b, Math.min(b, this.wx));
+    this.wy  = Math.max(-b, Math.min(b, this.wy));
   }
 
   // Perspective-project a single world-space point to canvas coords.
@@ -35,16 +63,20 @@ class Cube {
   move(dt) {
     this.cz += this.speed * dt;
     if (this.cz > this.maxZ) this.cz = 0;
+    this._clampXY(); // cz 改變後（尤其 reset 時）重新夾緊 XY
   }
 
   draw(ctx) {
     const h = this.halfSize;
     const z = this.cz;
 
+    const x = this.wx;
+    const y = this.wy;
+
     // 8 vertices: indices 0-3 = front face (z-h), 4-7 = back face (z+h)
     const V = [
-      [-h, -h, z-h], [ h, -h, z-h], [ h,  h, z-h], [-h,  h, z-h],
-      [-h, -h, z+h], [ h, -h, z+h], [ h,  h, z+h], [-h,  h, z+h],
+      [x-h, y-h, z-h], [x+h, y-h, z-h], [x+h, y+h, z-h], [x-h, y+h, z-h],
+      [x-h, y-h, z+h], [x+h, y-h, z+h], [x+h, y+h, z+h], [x-h, y+h, z+h],
     ];
 
     const P = V.map(([vx, vy, vz]) => this._project(vx, vy, vz));
