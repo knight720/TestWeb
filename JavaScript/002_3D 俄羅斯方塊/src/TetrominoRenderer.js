@@ -135,6 +135,21 @@ class TetrominoRenderer {
       quad(xLN, wBN,  xRN, wBN,  xRF, wBF,  xLF, wBF);  // 下牆
     }
 
+    // ── Z=maxZ 遠端平面投影（透視縮放 scaleAt(maxZ)）────────────
+    const US   = Camera.UNIT_SCALE;
+    const sFar = camera.scaleAt(maxZ);
+    for (const [dx, dy] of tetromino.shape.offsets) {
+      const bx = tetromino.wx + dx;
+      const by = tetromino.wy + dy;
+      const px = camera.cx + bx * US * sFar;
+      const py = camera.cy + by * US * sFar;
+      const hw = h * US * sFar;
+      ctx.beginPath();
+      ctx.rect(px - hw, py - hw, hw * 2, hw * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
     ctx.restore();
   }
 }
