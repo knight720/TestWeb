@@ -38,7 +38,7 @@ class Frustum {
       const s  = this._scaleAt(z);
       const hw = this.cx * s;
       const hh = this.cy * s;
-      ctx.strokeStyle = `rgba(0,255,255,${alpha})`;
+      ctx.strokeStyle = `rgba(59,130,246,${alpha})`;
       ctx.lineWidth   = 1;
       ctx.beginPath();
       ctx.rect(this.cx - hw, this.cy - hh, hw * 2, hh * 2);
@@ -52,7 +52,7 @@ class Frustum {
     const ix1  = this.cx - ihw,  iy1 = this.cy - ihh;
     const ix2  = this.cx + ihw,  iy2 = this.cy + ihh;
 
-    ctx.strokeStyle = 'rgba(0,255,255,0.18)';
+    ctx.strokeStyle = 'rgba(59,130,246,0.18)';
     ctx.lineWidth   = 0.8;
     ctx.beginPath();
     ctx.moveTo(0,      0);       ctx.lineTo(ix1, iy1);  // 左上

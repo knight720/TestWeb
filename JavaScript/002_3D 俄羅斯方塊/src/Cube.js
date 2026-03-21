@@ -82,11 +82,11 @@ class Cube {
     const P = V.map(([vx, vy, vz]) => this._project(vx, vy, vz));
 
     ctx.save();
-    ctx.strokeStyle = '#00ff88';
+    ctx.strokeStyle = '#e11d48';
     ctx.lineWidth   = 2;
     ctx.lineJoin    = 'round';
-    ctx.shadowColor = '#00ff88';
-    ctx.shadowBlur  = 12;
+    ctx.shadowColor = '#e11d48';
+    ctx.shadowBlur  = 10;
 
     ctx.beginPath();
     for (const [a, b] of Cube.EDGES) {
