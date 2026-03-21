@@ -7,8 +7,8 @@
 class Camera {
   /** 相機焦距（世界單位）；相機位於 Z = -FOCAL */
   static FOCAL      = 5;
-  /** 參考平面 (Z=0) 上每個世界單位對應的畫素數 */
-  static UNIT_SCALE = 150;
+  /** 參考平面 (Z=0) 上每個世界單位對應的畫素數；使 Z=0 截面剛好為 8×8 世界單位 */
+  static UNIT_SCALE = 50;
 
   constructor(canvasW, canvasH) {
     this.cx = canvasW / 2;

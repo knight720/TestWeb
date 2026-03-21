@@ -79,50 +79,60 @@ class TetrominoRenderer {
    * @param {Tetromino} tetromino
    */
   drawWallShadows(ctx, tetromino) {
-    const { camera }  = this;
-    const sFar = camera.scaleAt(tetromino.maxZ);
-    const ix1  = camera.cx * (1 - sFar);   // 最遠截面：左邊 x
-    const iy1  = camera.cy * (1 - sFar);   // 最遠截面：上邊 y
-    const ix2  = camera.cx * (1 + sFar);   // 最遠截面：右邊 x
-    const iy2  = camera.cy * (1 + sFar);   // 最遠截面：下邊 y
+    const { camera } = this;
+    const maxZ = tetromino.maxZ;
+    const h    = tetromino.halfSize;
 
     ctx.save();
     ctx.fillStyle   = tetromino.shape.color + '40';
     ctx.strokeStyle = tetromino.shape.color + 'aa';
     ctx.lineWidth   = 0.8;
 
+    const quad = (x0,y0, x1,y1, x2,y2, x3,y3) => {
+      ctx.beginPath();
+      ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.lineTo(x2,y2); ctx.lineTo(x3,y3);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    };
+
     for (const [dx, dy] of tetromino.shape.offsets) {
       const bx = tetromino.wx + dx;
       const by = tetromino.wy + dy;
       const bz = tetromino.cz;
-      const t  = bz / tetromino.maxZ;   // 深度比例 0(近) → 1(遠)
 
-      const s  = camera.scaleAt(bz);
-      const px = camera.cx + bx * Camera.UNIT_SCALE * s;  // 投影 X
-      const py = camera.cy + by * Camera.UNIT_SCALE * s;  // 投影 Y
-      const ph = tetromino.halfSize * Camera.UNIT_SCALE * s;  // 投影半徑
-      const dw = ix1 * (tetromino.halfSize * 2 / tetromino.maxZ);  // 牆面深度方向寬度
-      const dh = iy1 * (tetromino.halfSize * 2 / tetromino.maxZ);  // 牆面深度方向高度
+      // 方塊深度範圍（夾緊至走廊）
+      const zN = Math.max(0,    bz - h);
+      const zF = Math.min(maxZ, bz + h);
 
-      // 左牆
-      { const wx = t * ix1;
-        ctx.beginPath(); ctx.rect(wx - dw/2, py - ph, dw, ph*2);
-        ctx.fill(); ctx.stroke(); }
+      // 近/遠端透視縮放——與 Frustum、Camera.project 使用同一公式
+      const sN = camera.scaleAt(zN);
+      const sF = camera.scaleAt(zF);
 
-      // 右牆
-      { const wx = camera.w - t * (camera.w - ix2);
-        ctx.beginPath(); ctx.rect(wx - dw/2, py - ph, dw, ph*2);
-        ctx.fill(); ctx.stroke(); }
+      // 牆面邊緣位置：cx * (1 ± s)，直接由透視縮放決定，不做線性插值
+      const wLN = camera.cx * (1 - sN);  // 左牆近端 x
+      const wLF = camera.cx * (1 - sF);  // 左牆遠端 x
+      const wRN = camera.cx * (1 + sN);  // 右牆近端 x
+      const wRF = camera.cx * (1 + sF);  // 右牆遠端 x
+      const wTN = camera.cy * (1 - sN);  // 上牆近端 y
+      const wTF = camera.cy * (1 - sF);  // 上牆遠端 y
+      const wBN = camera.cy * (1 + sN);  // 下牆近端 y
+      const wBF = camera.cy * (1 + sF);  // 下牆遠端 y
 
-      // 上牆
-      { const wy = t * iy1;
-        ctx.beginPath(); ctx.rect(px - ph, wy - dh/2, ph*2, dh);
-        ctx.fill(); ctx.stroke(); }
+      // 方塊 Y 在近/遠端的透視投影（左/右牆用）
+      const yTN = camera.cy + (by - h) * Camera.UNIT_SCALE * sN;
+      const yBN = camera.cy + (by + h) * Camera.UNIT_SCALE * sN;
+      const yTF = camera.cy + (by - h) * Camera.UNIT_SCALE * sF;
+      const yBF = camera.cy + (by + h) * Camera.UNIT_SCALE * sF;
 
-      // 下牆
-      { const wy = camera.h - t * (camera.h - iy2);
-        ctx.beginPath(); ctx.rect(px - ph, wy - dh/2, ph*2, dh);
-        ctx.fill(); ctx.stroke(); }
+      // 方塊 X 在近/遠端的透視投影（上/下牆用）
+      const xLN = camera.cx + (bx - h) * Camera.UNIT_SCALE * sN;
+      const xRN = camera.cx + (bx + h) * Camera.UNIT_SCALE * sN;
+      const xLF = camera.cx + (bx - h) * Camera.UNIT_SCALE * sF;
+      const xRF = camera.cx + (bx + h) * Camera.UNIT_SCALE * sF;
+
+      quad(wLN, yTN,  wLN, yBN,  wLF, yBF,  wLF, yTF);  // 左牆
+      quad(wRN, yTN,  wRN, yBN,  wRF, yBF,  wRF, yTF);  // 右牆
+      quad(xLN, wTN,  xRN, wTN,  xRF, wTF,  xLF, wTF);  // 上牆
+      quad(xLN, wBN,  xRN, wBN,  xRF, wBF,  xLF, wBF);  // 下牆
     }
 
     ctx.restore();
