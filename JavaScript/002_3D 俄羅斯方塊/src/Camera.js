@@ -9,6 +9,8 @@ class Camera {
   static FOCAL      = 5;
   /** 參考平面 (Z=0) 上每個世界單位對應的畫素數；使 Z=0 截面剛好為 8×8 世界單位 */
   static UNIT_SCALE = 50;
+  /** 近端截面（Z=0）的格子數；播場寬高均為 GRID_SIZE 世界單位 */
+  static GRID_SIZE  = 8;
 
   constructor(canvasW, canvasH) {
     this.cx = canvasW / 2;

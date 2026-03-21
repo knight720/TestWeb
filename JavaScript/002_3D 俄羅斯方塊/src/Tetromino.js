@@ -67,14 +67,12 @@ class Tetromino {
   }
 
   /**
-   * 依目前深度，計算整體中心 (wx, wy) 的合法移動範圍。
-   * 以最近面 (cz - halfSize) 的視錐半寬扣除形狀外輪廓，
-   * 確保所有子方塊邊緣皆落在視錐內。
+   * 以 Z=0 的 8×8 格場邊界為固定移動範圍，不隨深度改變。
+   * frustumHalfAt(0) = GRID_SIZE / 2 = 4（世界單位）。
    */
   xyBound() {
-    const nearZ = Math.max(0, this.cz - this.halfSize);
-    const fh    = this.camera.frustumHalfAt(nearZ);
-    const ext   = this._shapeExtent();
+    const fh  = this.camera.frustumHalfAt(0);
+    const ext = this._shapeExtent();
     return {
       x: Math.max(0, fh - ext.x),
       y: Math.max(0, fh - ext.y),
