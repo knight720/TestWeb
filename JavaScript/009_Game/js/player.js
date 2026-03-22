@@ -28,12 +28,6 @@ class Player {
     if (input.left)  dx -= 1;
     if (input.right) dx += 1;
 
-    // Normalise diagonal so it doesn't move faster
-    if (dx !== 0 && dy !== 0) {
-      dx *= Math.SQRT1_2;
-      dy *= Math.SQRT1_2;
-    }
-
     this.moving = dx !== 0 || dy !== 0;
 
     // Update facing direction (vertical takes priority over horizontal)
