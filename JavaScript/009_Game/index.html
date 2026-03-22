@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Adventure Map</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-row">地形：<span id="terrain-name">—</span></div>
+    <div class="hud-row">座標：<span id="position-info">0, 0</span></div>
+  </div>
+
+  <div id="controls-hint">WASD / 方向鍵 移動</div>
+
+  <!-- Scripts (load order matters) -->
+  <script src="js/noise.js"></script>
+  <script src="js/constants.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
