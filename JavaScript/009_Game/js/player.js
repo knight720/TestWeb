@@ -1,12 +1,16 @@
 'use strict';
 
+const _playerSprite = new Image();
+_playerSprite.src = 'assets/player.png';
+
 class Player {
   constructor(x, y) {
     this.x         = x;
     this.y         = y;
-    this.size      = PLAYER_SIZE;  // 22 px
-    this.direction = 'down';       // 'up' | 'down' | 'left' | 'right'
+    this.size      = PLAYER_SIZE;
+    this.direction = 'down';
     this.moving    = false;
+    this.boatActive = false;
 
     this._animFrame = 0;
     this._animTimer = 0;
@@ -16,10 +20,20 @@ class Player {
   get tileCol() { return Math.floor(this.x / TILE_SIZE); }
   get tileRow() { return Math.floor(this.y / TILE_SIZE); }
 
+  toggleBoat() { this.boatActive = !this.boatActive; }
+
+  /** Water is passable when on a boat */
+  _isPassable(terrain) {
+    if (this.boatActive && terrain.animated) return true;
+    return terrain.passable;
+  }
+
   // ── Update ──────────────────────────────────────────────────────────────────
   update(input, gameMap, dt) {
     const terrain = gameMap.getTerrainAtPixel(this.x, this.y);
-    const speed   = terrain.passable ? PLAYER_SPEED * terrain.speedMod : 0;
+    const speed   = this._isPassable(terrain)
+      ? PLAYER_SPEED * (terrain.speedMod > 0 ? terrain.speedMod : (this.boatActive ? 0.75 : 0))
+      : 0;
 
     // Raw direction from input
     let dx = 0, dy = 0;
@@ -68,10 +82,10 @@ class Player {
   /** Returns true if all four corners of the player AABB are on passable tiles. */
   _canMoveTo(x, y, half, gameMap) {
     return (
-      gameMap.getTerrainAtPixel(x - half, y - half).passable &&
-      gameMap.getTerrainAtPixel(x + half, y - half).passable &&
-      gameMap.getTerrainAtPixel(x - half, y + half).passable &&
-      gameMap.getTerrainAtPixel(x + half, y + half).passable
+      this._isPassable(gameMap.getTerrainAtPixel(x - half, y - half)) &&
+      this._isPassable(gameMap.getTerrainAtPixel(x + half, y - half)) &&
+      this._isPassable(gameMap.getTerrainAtPixel(x - half, y + half)) &&
+      this._isPassable(gameMap.getTerrainAtPixel(x + half, y + half))
     );
   }
 
@@ -79,9 +93,7 @@ class Player {
   render(ctx, camera) {
     const sx  = (this.x - camera.x) | 0;
     const sy  = (this.y - camera.y) | 0;
-    const s   = this.size;
-    const hcy = -s * 0.18; // head centre Y (relative to player centre)
-    const hr  = s * 0.27;  // head radius
+    const s   = this.size * 2.2;  // sprite display size
 
     ctx.save();
 
@@ -89,61 +101,69 @@ class Player {
     ctx.globalAlpha = 0.22;
     ctx.fillStyle   = '#000';
     ctx.beginPath();
-    ctx.ellipse(sx, sy + s * 0.42, s * 0.42, s * 0.13, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx, sy + this.size * 0.42, this.size * 0.42, this.size * 0.13, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1.0;
 
-    // Walking bob (subtle vertical oscillation)
     const bob = this.moving ? Math.sin(this._animFrame * Math.PI * 0.5) * 1.5 : 0;
     ctx.translate(sx, sy + bob);
 
-    // ── Body (cloak) ──────────────────────────────────────────────────────────
-    ctx.fillStyle = '#2471a3';
-    ctx.beginPath();
-    ctx.ellipse(0, 2, s * 0.42, s * 0.44, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // Boat (drawn beneath player)
+    if (this.boatActive) {
+      ctx.fillStyle   = '#00eeff';
+      ctx.shadowColor = '#00eeff';
+      ctx.shadowBlur  = 16;
+      ctx.beginPath();
+      ctx.ellipse(0, s * 0.3, s * 0.55, s * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // boat rim highlight
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth   = 1.5;
+      ctx.stroke();
+      ctx.shadowBlur  = 0;
+    }
 
-    // Body highlight (adds slight 3-D feel)
-    ctx.fillStyle = 'rgba(255,255,255,0.13)';
-    ctx.beginPath();
-    ctx.ellipse(-s * 0.12, -s * 0.05, s * 0.2, s * 0.16, -0.4, 0, Math.PI * 2);
-    ctx.fill();
+    // Sprite (upside-down when no boat; right-side up with boat; flip X when facing left)
+    ctx.save();
+    const flipX = this.direction === 'left' ? -1 : 1;
+    const flipY = this.boatActive ? 1 : -1;
+    ctx.scale(flipX, flipY);
+    if (_playerSprite.complete && _playerSprite.naturalWidth > 0) {
+      ctx.drawImage(_playerSprite, -s / 2, -s / 2, s, s);
+    } else {
+      ctx.fillStyle = '#2471a3';
+      ctx.beginPath();
+      ctx.arc(0, 0, this.size * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
 
-    // ── Head ─────────────────────────────────────────────────────────────────
-    ctx.fillStyle = '#f0d9b5'; // skin tone
-    ctx.beginPath();
-    ctx.arc(0, hcy, hr, 0, Math.PI * 2);
-    ctx.fill();
+    // Direction arrow (drawn after sprite, always faces correctly)
+    this._drawDirectionArrow(ctx, s);
 
-    // Hair
-    ctx.fillStyle = '#7b4e2d';
-    ctx.beginPath();
-    ctx.arc(0, hcy - hr * 0.35, hr * 0.85, Math.PI, 0);
-    ctx.fill();
+    ctx.restore();
+  }
 
-    // Eyes (always face camera for simplicity)
-    ctx.fillStyle = '#2c3e50';
-    ctx.beginPath();
-    ctx.arc(-s * 0.09, hcy + s * 0.04, 1.8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc( s * 0.09, hcy + s * 0.04, 1.8, 0, Math.PI * 2);
-    ctx.fill();
+  _drawDirectionArrow(ctx, s) {
+    const OFFSET = s * 0.55;
+    const AW     = 5;
+    const AL     = 9;
+    const ROTATIONS = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
 
-    // ── Facing indicator ─────────────────────────────────────────────────────
-    // A small red dot on the edge of the head in the current facing direction
-    const FACE_DIR = {
-      up:    [ 0,    -hr ],
-      down:  [ 0,     hr ],
-      left:  [-hr,    0  ],
-      right: [ hr,    0  ],
-    };
-    const [fdx, fdy] = FACE_DIR[this.direction];
-    ctx.fillStyle = '#e74c3c';
-    ctx.beginPath();
-    ctx.arc(fdx, hcy + fdy, 2.8, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.save();
+    ctx.rotate(ROTATIONS[this.direction]);
+    ctx.translate(OFFSET, 0);
 
+    ctx.fillStyle   = '#ff00cc';
+    ctx.shadowColor = '#ff00cc';
+    ctx.shadowBlur  = 10;
+    ctx.beginPath();
+    ctx.moveTo(AL,  0);
+    ctx.lineTo(0,  -AW);
+    ctx.lineTo(0,   AW);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.restore();
   }
 }

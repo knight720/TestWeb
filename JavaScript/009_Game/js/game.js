@@ -32,11 +32,12 @@ class Camera {
 // ── Input handler ─────────────────────────────────────────────────────────────
 class InputHandler {
   constructor() {
-    this._keys = {};
+    this._keys        = {};
+    this._justPressed = {};
 
     window.addEventListener('keydown', e => {
+      if (!this._keys[e.code]) this._justPressed[e.code] = true;
       this._keys[e.code] = true;
-      // Prevent arrow keys / space from scrolling the page
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
         e.preventDefault();
       }
@@ -51,6 +52,14 @@ class InputHandler {
   get down()  { return !!(this._keys['ArrowDown']  || this._keys['KeyS']); }
   get left()  { return !!(this._keys['ArrowLeft']  || this._keys['KeyA']); }
   get right() { return !!(this._keys['ArrowRight'] || this._keys['KeyD']); }
+
+  wasPressed(code) {
+    if (this._justPressed[code]) {
+      delete this._justPressed[code];
+      return true;
+    }
+    return false;
+  }
 }
 
 // ── Game ──────────────────────────────────────────────────────────────────────
@@ -138,6 +147,8 @@ class Game {
   }
 
   _update(dt) {
+    if (this.input.wasPressed('KeyE')) this.player.toggleBoat();
+
     this.map.update(dt);
     this.player.update(this.input, this.map, dt);
     this.camera.follow(this.player.x, this.player.y);

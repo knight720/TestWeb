@@ -21,8 +21,8 @@ class GameMap {
     this._edgeCache = new Map();
     for (const terrain of Object.values(T)) {
       this._edgeCache.set(terrain, {
-        light: lightenColor(terrain.color, 24),
-        dark:  darkenColor (terrain.color, 20),
+        light: lightenColor(terrain.color, 55),
+        dark:  darkenColor (terrain.color, 50),
       });
     }
   }
@@ -77,7 +77,7 @@ class GameMap {
     const mmY     = PAD;
 
     // Border + dark background
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillStyle = 'rgba(0,5,20,0.88)';
     ctx.fillRect(mmX - BORDER, mmY - BORDER, DISPLAY + BORDER * 2, DISPLAY + BORDER * 2);
 
     // Map texture (scaled from 1 px/tile → DISPLAY px)
@@ -86,7 +86,7 @@ class GameMap {
     // Viewport rectangle
     const scaleX = DISPLAY / this.cols;
     const scaleY = DISPLAY / this.rows;
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.strokeStyle = 'rgba(0,255,255,0.75)';
     ctx.lineWidth   = 1;
     ctx.strokeRect(
       mmX + (camX / this.tileSize) * scaleX,
@@ -99,7 +99,7 @@ class GameMap {
     const markerX = mmX + (playerX / (this.cols * this.tileSize)) * DISPLAY;
     const markerY = mmY + (playerY / (this.rows * this.tileSize)) * DISPLAY;
 
-    ctx.fillStyle = '#e74c3c';
+    ctx.fillStyle = '#ff00cc';
     ctx.beginPath();
     ctx.arc(markerX, markerY, 3.5, 0, Math.PI * 2);
     ctx.fill();
@@ -123,8 +123,8 @@ class GameMap {
     const endCol   = Math.min(this.cols - 1, Math.ceil((camera.x + camera.width)  / ts));
     const endRow   = Math.min(this.rows - 1, Math.ceil((camera.y + camera.height) / ts));
 
-    // Water shimmer: gentle sine-wave brightness shift
-    const waterShift = (Math.sin(this._waterTick * 0.0014) * 14) | 0;
+    // Water shimmer: pulse toward neon cyan
+    const waterPulse = ((Math.sin(this._waterTick * 0.0014) + 1) * 0.5 * 90) | 0;
 
     for (let row = startRow; row <= endRow; row++) {
       for (let col = startCol; col <= endCol; col++) {
@@ -135,7 +135,7 @@ class GameMap {
         // ── Base fill ──────────────────────────────────────────────────────
         if (terrain.animated) {
           const [r, g, b] = hexToRgb(terrain.color);
-          ctx.fillStyle = `rgb(${r},${Math.max(0, g)},${Math.min(255, b + waterShift)})`;
+          ctx.fillStyle = `rgb(${r},${Math.min(255, g + waterPulse)},${Math.min(255, b + waterPulse)})`;
           ctx.fillRect(sx, sy, ts, ts);
         } else {
           ctx.fillStyle = terrain.color;

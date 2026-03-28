@@ -23,13 +23,13 @@ const PLAYER_SIZE  = 22;   // visual / hitbox reference
  *   animated  – true for tiles that get a per-frame colour variation (water)
  */
 const T = {
-  DEEP_WATER:    { id: 0, name: '深水',  color: '#1b4f72', passable: false, speedMod: 0.0, animated: true  },
-  SHALLOW_WATER: { id: 1, name: '淺水',  color: '#2471a3', passable: false, speedMod: 0.0, animated: true  },
-  SAND:          { id: 2, name: '沙灘',  color: '#f9e79f', passable: true,  speedMod: 0.7, animated: false },
-  GRASS:         { id: 3, name: '草地',  color: '#27ae60', passable: true,  speedMod: 1.0, animated: false },
-  FOREST:        { id: 4, name: '森林',  color: '#1e8449', passable: true,  speedMod: 0.6, animated: false },
-  MOUNTAIN:      { id: 5, name: '山地',  color: '#7f8c8d', passable: true,  speedMod: 0.4, animated: false },
-  SNOW:          { id: 6, name: '雪峰',  color: '#d6eaf8', passable: false, speedMod: 0.0, animated: false },
+  DEEP_WATER:    { id: 0, name: '深淵',   color: '#0022cc', passable: false, speedMod: 0.0, animated: true  },
+  SHALLOW_WATER: { id: 1, name: '電磁水', color: '#0055ff', passable: false, speedMod: 0.0, animated: true  },
+  SAND:          { id: 2, name: '熔岩灘', color: '#ff6600', passable: true,  speedMod: 0.7, animated: false },
+  GRASS:         { id: 3, name: '霓虹原', color: '#000000', passable: true,  speedMod: 1.0, animated: false },
+  FOREST:        { id: 4, name: '翠光林', color: '#00ffaa', passable: true,  speedMod: 0.6, animated: false },
+  MOUNTAIN:      { id: 5, name: '電紫峰', color: '#cc00ff', passable: true,  speedMod: 0.4, animated: false },
+  SNOW:          { id: 6, name: '冰電峰', color: '#00eeff', passable: false, speedMod: 0.0, animated: false },
 };
 
 // Thresholds are checked in order; first match wins (noise value is in [0, 1])
