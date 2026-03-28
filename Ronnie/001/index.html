@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚔️ Eldoria Chronicles</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#000010; display:flex; justify-content:center; align-items:center; min-height:100vh; overflow:hidden; }
+  canvas { image-rendering:pixelated; image-rendering:crisp-edges; display:block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// ═══════════════════════════════════════════════════════════════
+//   ELDORIA CHRONICLES  ·  RPG Canvas Demo
+// ═══════════════════════════════════════════════════════════════
+const C = document.getElementById('c');
+const G = C.getContext('2d');
+const SW = 800, SH = 608;
+C.width = SW; C.height = SH;
+
+function resize() {
+  const s = Math.min(innerWidth / SW, innerHeight / SH);
+  C.style.width  = (SW * s) + 'px';
+  C.style.height = (SH * s) + 'px';
+}
+resize(); window.addEventListener('resize', resize);
+
+// ── Tile IDs & constants ──────────────────────────────────────
+const TS = 32;
+const MW = 50, MH = 38;
+const TID = { DEEP:0,WATER:1,SAND:2,GRASS:3,FGRASS:4,PATH:5,COBB:6,TREE:7,WALL:8,FLOOR:9,MOUNT:10,SNOW:11,TGRASS:12,DOOR:13 };
+const SOLID = new Set([TID.TREE, TID.WALL, TID.MOUNT, TID.SNOW, TID.DEEP]);
+
+// ── Build world map ───────────────────────────────────────────
+function buildMap() {
+  const m = Array.from({length: MH}, () => new Array(MW).fill(TID.GRASS));
+  const set  = (x,y,t) => { if(x>=0&&x<MW&&y>=0&&y<MH) m[y][x]=t; };
+  const fill = (x,y,w,h,t) => { for(let dy=0;dy<h;dy++) for(let dx=0;dx<w;dx++) set(x+dx,y+dy,t); };
+
+  fill(0,0,MW,4,TID.MOUNT);  fill(0,0,MW,2,TID.SNOW);
+  fill(0,0,2,MH,TID.MOUNT);  fill(MW-2,0,2,MH,TID.MOUNT);
+  fill(0,MH-3,MW,3,TID.MOUNT);
+
+  for(let y=4;y<12;y++) for(let x=3;x<26;x++) if((x*3+y*7)%7!==0) set(x,y,TID.TREE);
+  for(let y=4;y<19;y++) { set(14,y,TID.PATH); set(15,y,TID.PATH); }
+  for(let x=4;x<22;x++) { set(x,7,TID.PATH);  set(x,8,TID.PATH); }
+
+  fill(3,17,11,9,TID.WATER); fill(4,16,9,11,TID.WATER);
+  fill(5,16,7,13,TID.WATER); fill(5,18,5,8,TID.DEEP);
+  fill(3,16,12,1,TID.SAND);  fill(3,28,12,2,TID.SAND);
+  fill(3,16,1,13,TID.SAND);  fill(14,16,1,13,TID.SAND);
+
+  fill(22,18,11,9,TID.COBB);
+  for(let y=4;y<MH-3;y++)  { set(24,y,TID.PATH); set(25,y,TID.PATH); }
+  for(let x=3;x<MW-2;x++)  { set(x,18,TID.PATH); set(x,19,TID.PATH); }
+
+  fill(17,13,7,6,TID.WALL); fill(18,14,5,4,TID.FLOOR); set(20,18,TID.DOOR);
+  fill(28,12,7,6,TID.WALL); fill(29,13,5,4,TID.FLOOR); set(31,17,TID.DOOR);
+  fill(26,24,9,7,TID.WALL); fill(27,25,7,5,TID.FLOOR); set(30,30,TID.DOOR);
+  fill(36,13,7,6,TID.WALL); fill(37,14,5,4,TID.FLOOR); set(39,18,TID.DOOR);
+  fill(38,25,6,5,TID.WALL); fill(39,26,4,3,TID.FLOOR); set(40,29,TID.DOOR);
+
+  for(let x=32;x<37;x++) set(x,17,TID.PATH);
+  for(let x=32;x<39;x++) set(x,28,TID.PATH);
+  for(let y=11;y<19;y++) { set(34,y,TID.PATH); set(35,y,TID.PATH); }
+  for(let y=3;y<19;y++)  { set(36,y,TID.PATH); set(37,y,TID.PATH); }
+
+  [[17,10],[21,12],[9,30],[40,23],[43,27],[12,26],[33,22]].forEach(([x,y])=>set(x,y,TID.FGRASS));
+
+  for(let y=22;y<MH-3;y++) for(let x=36;x<MW-2;x++) if((x+y)%3!==0) set(x,y,TID.TGRASS);
+  for(let y=4;y<17;y++)    for(let x=29;x<48;x++)    if((x*5+y*3)%9!==0) set(x,y,TID.TREE);
+
+  set(27,21,TID.WALL);
+  return m;
+}
+const worldMap = buildMap();
+
+// ── Tile texture cache ────────────────────────────────────────
+const tileCache = {};
+function getTile(id, fr) {
+  const k = `${id}_${fr|0}`;
+  if (tileCache[k]) return tileCache[k];
+  const tc = Object.assign(document.createElement('canvas'), {width:TS,height:TS});
+  paintTile(tc.getContext('2d'), id, fr|0);
+  return (tileCache[k] = tc);
+}
+
+function paintTile(g, id, fr) {
+  const BASE = {
+    [TID.DEEP]:'#0e2240',[TID.WATER]:'#1a5ca0',[TID.SAND]:'#c4a060',
+    [TID.GRASS]:'#3a7c44',[TID.FGRASS]:'#3a7c44',[TID.PATH]:'#8a7060',
+    [TID.COBB]:'#686070',[TID.TREE]:'#1a5c2e',[TID.WALL]:'#7a6f60',
+    [TID.FLOOR]:'#8a7060',[TID.MOUNT]:'#565668',[TID.SNOW]:'#d8e4f0',
+    [TID.TGRASS]:'#4a8c55',[TID.DOOR]:'#7a5530',
+  };
+  g.fillStyle = BASE[id] ?? '#3a7c44';
+  g.fillRect(0,0,TS,TS);
+
+  if (id===TID.GRASS || id===TID.TGRASS || id===TID.FGRASS) {
+    g.fillStyle='rgba(0,0,0,0.07)';
+    for(let i=0;i<4;i++) { g.fillRect(i*8+1,0,1,TS); g.fillRect(0,i*8+1,TS,1); }
+    if (id===TID.FGRASS) { ['#ff6080','#ffe040','#ff80ff','#60e060'].forEach((c,i)=>{ g.fillStyle=c; g.fillRect(3+i*7,(i*5)%20,4,4); }); }
+    if (id===TID.TGRASS) { g.fillStyle='rgba(255,255,255,0.1)'; for(let i=0;i<5;i++) g.fillRect(4+i*6,2,2,14); }
+  }
+  if (id===TID.WATER || id===TID.DEEP) {
+    const ws = fr*8;
+    g.fillStyle='rgba(255,255,255,0.07)';
+    for(let i=0;i<2;i++) g.fillRect((ws+i*18)%TS, 5+i*12, 12, 2);
+    if (id===TID.WATER) { g.fillStyle='rgba(100,180,255,0.1)'; g.beginPath(); g.arc(16,16,7,0,Math.PI*2); g.fill(); }
+  }
+  if (id===TID.SAND) { g.fillStyle='rgba(255,200,100,0.15)'; for(let i=0;i<8;i++) g.fillRect(2+(i*11)%28,(i*7)%28,2,2); }
+  if (id===TID.COBB) {
+    g.strokeStyle='rgba(0,0,0,0.2)'; g.lineWidth=1;
+    for(let r=0;r<4;r++) for(let c=0;c<4;c++) {
+      const off=r%2===0?0:4;
+      g.fillStyle=`rgba(${r%2*12},${c%2*8},0,0.07)`; g.fillRect((c*8+off)%32+1,r*8+1,6,5);
+      g.strokeRect((c*8+off)%32+0.5,r*8+0.5,7,6);
+    }
+  }
+  if (id===TID.PATH) { g.fillStyle='rgba(0,0,0,0.1)'; for(let i=0;i<5;i++) g.fillRect((i*11)%28,(i*7)%28,4,2); }
+  if (id===TID.TREE) {
+    const grad=g.createRadialGradient(16,13,3,16,13,14);
+    grad.addColorStop(0,'#4aad5a'); grad.addColorStop(0.6,'#2d8040'); grad.addColorStop(1,'#1a5c2e');
+    g.fillStyle=grad; g.beginPath(); g.arc(16,13,14,0,Math.PI*2); g.fill();
+    g.fillStyle='rgba(255,255,255,0.12)'; g.beginPath(); g.arc(11,9,5,0,Math.PI*2); g.fill();
+    g.fillStyle='#4a3020'; g.fillRect(13,25,6,7);
+  }
+  if (id===TID.WALL) {
+    g.fillStyle='#7a6f60'; g.fillRect(0,0,TS,TS);
+    for(let r=0;r<4;r++) for(let c=0;c<3;c++) {
+      const off=r%2===0?0:8;
+      g.fillStyle=`rgba(${r%2*15},${c%2*10},0,0.1)`; g.fillRect(c*16+off+1,r*8+1,13,6);
+      g.strokeStyle='rgba(0,0,0,0.25)'; g.lineWidth=1; g.strokeRect(c*16+off+0.5,r*8+0.5,14,7);
+    }
+    g.fillStyle='rgba(0,0,0,0.18)'; g.fillRect(0,TS-4,TS,4);
+  }
+  if (id===TID.FLOOR) {
+    for(let r=0;r<4;r++) { g.fillStyle=r%2===0?'#9a7a55':'#8a6a45'; g.fillRect(0,r*8,TS,8); }
+    g.fillStyle='rgba(0,0,0,0.15)'; [0,8,16,24].forEach(y=>g.fillRect(0,y,TS,1));
+  }
+  if (id===TID.MOUNT || id===TID.SNOW) {
+    g.fillStyle='rgba(0,0,0,0.12)'; g.fillRect(8,0,2,TS); g.fillRect(22,4,2,TS);
+    g.fillStyle='rgba(255,255,255,0.1)'; g.fillRect(0,TS-6,TS,3);
+    if (id===TID.SNOW) { g.fillStyle='rgba(255,255,255,0.3)'; g.fillRect(0,0,TS,8); }
+  }
+  if (id===TID.DOOR) {
+    g.fillStyle='#8a6040'; g.fillRect(8,0,16,TS);
+    g.fillStyle='rgba(0,0,0,0.2)'; g.fillRect(8,TS/2-1,16,2); g.fillRect(15,0,2,TS);
+    g.fillStyle='#c8a020'; g.beginPath(); g.arc(20,TS/2,3,0,Math.PI*2); g.fill();
+  }
+}
+
+// Pre-warm tile cache
+for(let id=0;id<=13;id++) for(let fr=0;fr<4;fr++) getTile(id,fr);
+
+// ── Camera ────────────────────────────────────────────────────
+const cam = { x:0, y:0 };
+function updateCamera(px,py) {
+  const tx = px - (SW/2), ty = py - (SH/2);
+  cam.x += (tx - cam.x) * 0.12;
+  cam.y += (ty - cam.y) * 0.12;
+  cam.x = Math.max(0, Math.min(cam.x, (MW-1)*TS - SW));
+  cam.y = Math.max(0, Math.min(cam.y, (MH-1)*TS - SH));
+}
+
+// ── Player ────────────────────────────────────────────────────
+const player = {
+  x: 24*TS+16, y: 21*TS+16,
+  dir:'down', frame:0, frameTimer:0,
+  speed: 2.5, moving:false,
+  hp:82, maxHp:100, mp:55, maxMp:80,
+  exp:340, maxExp:500, level:7,
+  gold:2480, name:'ALDRIC',
+  baseAtk:10, baseDef:5,
+  equipment:{ weapon:null, armor:null, accessory:null },
+  inventory:['iron_sword','leather_armor','fire_sword','dragon_plate','magic_ring','hero_amulet'],
+  attackTimer:0, attackCooldown:0,
+  showInventory:false,
+};
+
+// ── Item Database ─────────────────────────────────────────────
+const ITEMS = {
+  iron_sword:    { name:'Iron Sword',    type:'weapon',    bladeColor:'#c0c8d0', guardColor:'#c09020', len:20, atk:15, def:0,  hpB:0,  mpB:0  },
+  steel_sword:   { name:'Steel Sword',   type:'weapon',    bladeColor:'#80b8e0', guardColor:'#6090b8', len:22, atk:28, def:0,  hpB:0,  mpB:0  },
+  fire_sword:    { name:'Fire Sword',    type:'weapon',    bladeColor:'#ff6020', guardColor:'#c04010', len:24, atk:45, def:0,  hpB:0,  mpB:0  },
+  dragon_slayer: { name:'Dragon Slayer', type:'weapon',    bladeColor:'#f0d020', guardColor:'#d0a010', len:28, atk:68, def:0,  hpB:0,  mpB:0  },
+  leather_armor: { name:'Leather Armor', type:'armor',     bodyColor:'#8a5c30',  atk:0, def:8,  hpB:0,  mpB:0  },
+  iron_armor:    { name:'Iron Armor',    type:'armor',     bodyColor:'#909098',  atk:0, def:20, hpB:0,  mpB:0  },
+  dragon_plate:  { name:'Dragon Plate',  type:'armor',     bodyColor:'#8a2828',  atk:0, def:38, hpB:25, mpB:0  },
+  magic_ring:    { name:'Magic Ring',    type:'accessory', atk:0, def:0, hpB:0,  mpB:30 },
+  lucky_charm:   { name:'Lucky Charm',   type:'accessory', atk:0, def:0, hpB:30, mpB:0  },
+  hero_amulet:   { name:"Hero's Amulet", type:'accessory', atk:12, def:6, hpB:0,  mpB:0  },
+};
+
+function recalcStats() {
+  const arm=player.equipment.armor    ?ITEMS[player.equipment.armor]:null;
+  const acc=player.equipment.accessory?ITEMS[player.equipment.accessory]:null;
+  player.maxHp=100+(arm?.hpB||0)+(acc?.hpB||0);
+  player.maxMp=80 +(arm?.mpB||0)+(acc?.mpB||0);
+  player.hp=Math.min(player.hp,player.maxHp); player.mp=Math.min(player.mp,player.maxMp);
+}
+function getATK() {
+  const w=player.equipment.weapon    ?ITEMS[player.equipment.weapon]:null;
+  const a=player.equipment.accessory ?ITEMS[player.equipment.accessory]:null;
+  return player.baseAtk+(w?.atk||0)+(a?.atk||0);
+}
+function getDEF() {
+  const ar=player.equipment.armor    ?ITEMS[player.equipment.armor]:null;
+  const a=player.equipment.accessory ?ITEMS[player.equipment.accessory]:null;
+  return player.baseDef+(ar?.def||0)+(a?.def||0);
+}
+function equipItem(itemId) {
+  const it=ITEMS[itemId]; if(!it) return;
+  const slot=it.type==='weapon'?'weapon':it.type==='armor'?'armor':'accessory';
+  const prev=player.equipment[slot];
+  if(prev===itemId) { player.equipment[slot]=null; player.inventory.push(itemId); }
+  else {
+    if(prev) player.inventory.push(prev);
+    player.equipment[slot]=itemId;
+    player.inventory.splice(player.inventory.indexOf(itemId),1);
+  }
+  recalcStats();
+}
+
+// ── NPCs ──────────────────────────────────────────────────────
+const npcs = [
+  { x:21*TS+16, y:20*TS+16, color:'#e8a050', hair:'#8a4a18', name:'Village Elder',
+    msg:['The Dark Realm stirs once more…','The Crystal of Dawn was shattered.','Only the chosen hero can reforge it!'],
+    dir:'down', frame:0, ft:0, wt:0, wd:'right' },
+  { x:29*TS+16, y:20*TS+16, color:'#50c8e8', hair:'#2a4a8a', name:'Merchant',
+    msg:['Welcome! Finest wares in the land!','Health Potion ×3 — only 50 gold!','Check back tomorrow for new stock.'],
+    dir:'left', frame:0, ft:0, wt:0, wd:'up' },
+  { x:28*TS+16, y:27*TS+16, color:'#e85090', hair:'#6a1a40', name:'Innkeeper',
+    msg:['Welcome to The Dragon\'s Rest Inn!','Rest for the night — 30 gold.','Sweet dreams, brave adventurer!'],
+    dir:'down', frame:0, ft:0, wt:0, wd:'idle' },
+  { x:37*TS+16, y:15*TS+16, color:'#a0a0b8', hair:'#2a2a3a', name:'Blacksmith',
+    msg:['Need your blade sharpened?','Iron Sword — 200 gold.','Full plate armour — 500 gold.'],
+    dir:'right', frame:0, ft:0, wt:0, wd:'left' },
+];
+
+// ── Enemies ───────────────────────────────────────────────────
+const enemies = [
+  { x:18*TS+16, y:22*TS+16, hp:30,  maxHp:30,  atk:5,  color:'#50c050', sz:12, name:'Slime',  alive:true, hitTimer:0, dieTimer:0, bt:0 },
+  { x:22*TS+16, y:26*TS+16, hp:60,  maxHp:60,  atk:12, color:'#5080e0', sz:14, name:'Golem',  alive:true, hitTimer:0, dieTimer:0, bt:0 },
+  { x:33*TS+16, y:24*TS+16, hp:90,  maxHp:90,  atk:18, color:'#e05030', sz:16, name:'Orc',    alive:true, hitTimer:0, dieTimer:0, bt:0 },
+  { x:10*TS+16, y:28*TS+16, hp:25,  maxHp:25,  atk:4,  color:'#d0d0e0', sz:10, name:'Bat',    alive:true, hitTimer:0, dieTimer:0, bt:0 },
+  { x:41*TS+16, y:9*TS+16,  hp:160, maxHp:160, atk:40, color:'#c83070', sz:22, name:'Dragon', alive:true, hitTimer:0, dieTimer:0, bt:0 },
+];
+
+// ── Damage Numbers ────────────────────────────────────────────
+const dmgNums = [];
+function spawnDmgNum(x,y,val,crit) { dmgNums.push({x,y,vy:-2,life:1.8,decay:.028,val,crit:crit||false}); }
+
+function doAttack() {
+  if(player.attackCooldown>0||dlg.on) return;
+  const cd=player.equipment.weapon?28:22;
+  player.attackTimer=Math.floor(cd*.7); player.attackCooldown=cd;
+  const ATK=getATK();
+  const dv={down:[0,46],up:[0,-46],left:[-46,0],right:[46,0]}[player.dir];
+  const hx=player.x+dv[0], hy=player.y+dv[1];
+  for(const e of enemies) {
+    if(!e.alive) continue;
+    const d=Math.hypot(e.x-hx, e.y-hy);
+    if(d<54+e.sz) {
+      const crit=Math.random()<.15;
+      const dmg=Math.max(1,ATK+(crit?ATK:0)-Math.floor(Math.random()*4));
+      e.hp=Math.max(0,e.hp-dmg); e.hitTimer=16;
+      spawnDmgNum(e.x, e.y-e.sz-10, dmg, crit);
+      if(e.hp<=0) {
+        e.alive=false; e.dieTimer=40;
+        player.exp+=e.maxHp*2;
+        if(player.exp>=player.maxExp){ player.exp-=player.maxExp; player.level++; player.maxExp=Math.floor(player.maxExp*1.4); }
+        for(let i=0;i<5;i++) spawnDust(e.x+(Math.random()-.5)*20, e.y+(Math.random()-.5)*20);
+      }
+    }
+  }
+}
+
+function drawAttackSwing(wx,wy) {
+  if(player.attackTimer<=0) return;
+  const t=player.attackTimer/Math.max(1,Math.floor(player.attackCooldown*.7));
+  const col=player.equipment.weapon?ITEMS[player.equipment.weapon].bladeColor:'#c0d8ff';
+  G.save(); G.globalAlpha=t*.6; G.strokeStyle=col; G.lineWidth=5;
+  const SA={right:[-0.65,0.65],left:[Math.PI-.65,Math.PI+.65],down:[Math.PI/2-.65,Math.PI/2+.65],up:[-Math.PI/2-.65,-Math.PI/2+.65]};
+  const [a1,a2]=SA[player.dir];
+  G.beginPath(); G.arc(wx,wy-12,50, a1+(1-t)*(a2-a1)*.4, a2-(1-t)*(a2-a1)*.4); G.stroke();
+  G.globalAlpha=t*.22; G.strokeStyle='#fff'; G.lineWidth=2; G.stroke();
+  G.restore();
+}
+
+function drawEnemy(e) {
+  if(!e.alive&&e.dieTimer<=0) return;
+  G.save(); G.globalAlpha=e.alive?1:e.dieTimer/40;
+  const bob=Math.sin(e.bt*.09)*3;
+  G.fillStyle=(e.hitTimer>0&&Math.floor(e.hitTimer/3)%2===0)?'#ffffff':e.color;
+  G.beginPath(); G.ellipse(e.x,e.y-e.sz+bob,e.sz,e.sz*.8,0,0,Math.PI*2); G.fill();
+  G.fillStyle='rgba(255,255,255,.2)'; G.beginPath(); G.ellipse(e.x-e.sz*.25,e.y-e.sz*1.3+bob,e.sz*.35,e.sz*.25,-.4,0,Math.PI*2); G.fill();
+  G.fillStyle='#1a1a28';
+  G.fillRect(e.x-e.sz*.42,e.y-e.sz*.45+bob,e.sz*.28,e.sz*.28);
+  G.fillRect(e.x+e.sz*.14,e.y-e.sz*.45+bob,e.sz*.28,e.sz*.28);
+  if(e.alive) {
+    const bw=e.sz*3.2,bh=5,bx=e.x-bw/2,by=e.y-e.sz*2.2+bob;
+    G.fillStyle='#300000'; G.fillRect(bx,by,bw,bh);
+    G.fillStyle=e.hp/e.maxHp>.5?'#40e040':e.hp/e.maxHp>.25?'#e0e020':'#e04020';
+    G.fillRect(bx,by,bw*(e.hp/e.maxHp),bh);
+    G.strokeStyle='rgba(0,0,0,.5)'; G.lineWidth=1; G.strokeRect(bx,by,bw,bh);
+    G.fillStyle='#d0c8a0'; G.font='6px "Press Start 2P"'; G.textAlign='center';
+    G.globalAlpha*=.8; G.fillText(e.name,e.x,by-3); G.textAlign='left';
+  }
+  G.restore();
+}
+
+// ── Inventory / Equipment Panel ───────────────────────────────
+const INV_PANEL={ x:140,y:144,w:520,h:300 };
+
+function drawItemIcon(x,y,w,h,it) {
+  if(it.type==='weapon') {
+    G.fillStyle=it.bladeColor; G.fillRect(x+w/2-3,y+4,6,h-10);
+    G.fillStyle=it.guardColor; G.fillRect(x+4,y+h*.3,w-8,4);
+    G.fillStyle='rgba(255,255,255,.25)'; G.fillRect(x+w/2,y+4,2,h-14);
+    if(it.bladeColor==='#ff6020') { G.fillStyle='rgba(255,120,0,.35)'; G.fillRect(x+w/2-5,y+2,10,h-8); }
+    if(it.bladeColor==='#f0d020') { G.fillStyle='rgba(255,220,0,.3)';  G.fillRect(x+w/2-5,y+2,10,h-8); }
+  } else if(it.type==='armor') {
+    const bc=it.bodyColor||'#909098';
+    G.fillStyle=bc; G.fillRect(x+4,y+6,w-8,h-10);
+    G.fillStyle=shade(bc,40); G.fillRect(x+6,y+8,w-12,6);
+    G.fillStyle=shade(bc,-25); G.fillRect(x+4,y+h-10,w-8,6);
+  } else {
+    const rc=it.atk>0?'#80e080':it.mpB>0?'#8088ff':'#ffd040';
+    G.strokeStyle=rc; G.lineWidth=3;
+    G.beginPath(); G.arc(x+w/2,y+h/2,w/2-4,0,Math.PI*2); G.stroke();
+    G.strokeStyle='rgba(255,255,255,.35)'; G.lineWidth=2;
+    G.beginPath(); G.arc(x+w/2-2,y+h/2-2,4,0,Math.PI*.7); G.stroke();
+  }
+}
+
+function drawInventoryPanel() {
+  if(!player.showInventory) return;
+  const P=INV_PANEL;
+  panel(P.x,P.y,P.w,P.h);
+  G.fillStyle='#f0d080'; G.font='9px "Press Start 2P"'; G.textAlign='center';
+  G.fillText('EQUIPMENT & INVENTORY',P.x+P.w/2,P.y+18); G.textAlign='left';
+  G.fillStyle='rgba(200,160,80,.3)'; G.fillRect(P.x+10,P.y+24,P.w-20,1);
+  const slotDefs=[
+    {key:'weapon',   label:'WEAPON',   ey:P.y+42},
+    {key:'armor',    label:'ARMOR',    ey:P.y+122},
+    {key:'accessory',label:'ACCESSORY',ey:P.y+202},
+  ];
+  const SLX=P.x+18;
+  for(const sl of slotDefs) {
+    const id=player.equipment[sl.key], it=id?ITEMS[id]:null;
+    G.fillStyle=it?'rgba(200,160,40,.2)':'rgba(255,255,255,.04)';
+    G.fillRect(SLX,sl.ey,62,62);
+    G.strokeStyle=it?'#c8a050':'#505068'; G.lineWidth=1.5; G.strokeRect(SLX,sl.ey,62,62);
+    G.fillStyle='#7070a0'; G.font='5px "Press Start 2P"'; G.fillText(sl.label,SLX,sl.ey-5);
+    if(it) {
+      drawItemIcon(SLX+7,sl.ey+7,48,48,it);
+      G.fillStyle='#d8c870'; G.font='5px "Press Start 2P"'; G.fillText(it.name.slice(0,11),SLX,sl.ey+66);
+    } else {
+      G.fillStyle='#404060'; G.font='5px "Press Start 2P"'; G.textAlign='center';
+      G.fillText('—empty—',SLX+31,sl.ey+35); G.textAlign='left';
+    }
+  }
+  G.fillStyle='rgba(200,160,80,.2)'; G.fillRect(P.x+96,P.y+36,1,230);
+  const sx=P.x+108;
+  [['ATK','#ff8060',getATK()],['DEF','#60c0ff',getDEF()],['HP ','#ff6060',player.maxHp],['MP ','#7088ff',player.maxMp]].forEach(([lbl,col,val],i)=>{
+    G.fillStyle='#b0a070'; G.font='7px "Press Start 2P"'; G.fillText(lbl,sx,P.y+56+i*22);
+    G.fillStyle=col; G.fillText(val,sx+40,P.y+56+i*22);
+  });
+  G.fillStyle='rgba(200,160,80,.2)'; G.fillRect(P.x+194,P.y+36,1,230);
+  G.fillStyle='#f0d080'; G.font='7px "Press Start 2P"'; G.textAlign='center';
+  G.fillText('BAG',P.x+P.w/2+100,P.y+48); G.textAlign='left';
+  const COLS=4,SZ=56,GAP=10,igx=P.x+206,igy=P.y+54;
+  for(let i=0;i<8;i++) {
+    const ix=igx+(i%COLS)*(SZ+GAP), iy=igy+Math.floor(i/COLS)*(SZ+GAP+2);
+    const itemId=player.inventory[i], it=itemId?ITEMS[itemId]:null;
+    G.fillStyle=it?'rgba(200,160,40,.15)':'rgba(255,255,255,.03)';
+    G.fillRect(ix,iy,SZ,SZ);
+    G.strokeStyle=it?'#807050':'#3a3a55'; G.lineWidth=1; G.strokeRect(ix,iy,SZ,SZ);
+    if(it) {
+      drawItemIcon(ix+5,iy+5,SZ-10,SZ-10,it);
+      G.fillStyle='rgba(0,0,0,.55)'; G.fillRect(ix,iy+SZ-14,SZ,14);
+      G.fillStyle='#ccc070'; G.font='5px "Press Start 2P"'; G.textAlign='center';
+      G.fillText(it.name.slice(0,8),ix+SZ/2,iy+SZ-4); G.textAlign='left';
+    }
+  }
+  G.fillStyle='#505070'; G.font='6px "Press Start 2P"'; G.textAlign='center';
+  G.fillText('[Click] equip/unequip  [I] close',P.x+P.w/2,P.y+P.h-10); G.textAlign='left';
+}
+
+function handleInvClick(mx,my) {
+  const P=INV_PANEL;
+  if(mx<P.x||mx>P.x+P.w||my<P.y||my>P.y+P.h){ player.showInventory=false; return; }
+  const slotDefs=[{key:'weapon',ey:P.y+42},{key:'armor',ey:P.y+122},{key:'accessory',ey:P.y+202}];
+  for(const sl of slotDefs) {
+    if(mx>=P.x+18&&mx<P.x+80&&my>=sl.ey&&my<sl.ey+62&&player.equipment[sl.key]) {
+      const id=player.equipment[sl.key]; player.equipment[sl.key]=null; player.inventory.push(id); recalcStats(); return;
+    }
+  }
+  const COLS=4,SZ=56,GAP=10,igx=P.x+206,igy=P.y+54;
+  for(let i=0;i<Math.min(8,player.inventory.length);i++) {
+    const ix=igx+(i%COLS)*(SZ+GAP), iy=igy+Math.floor(i/COLS)*(SZ+GAP+2);
+    if(mx>=ix&&mx<ix+SZ&&my>=iy&&my<iy+SZ&&player.inventory[i]){ equipItem(player.inventory[i]); return; }
+  }
+}
+
+// ── Input ─────────────────────────────────────────────────────
+const keys = {};
+document.addEventListener('keydown', e => { keys[e.code]=true; });
+document.addEventListener('keyup',   e => { keys[e.code]=false; });
+
+// ── Particles ─────────────────────────────────────────────────
+const particles = [];
+function spawnDust(x,y) {
+  for(let i=0;i<3;i++) particles.push({
+    x, y, vx:(Math.random()-.5)*1.5, vy:-Math.random()*1.2-.3,
+    life:1, decay:.06, color:'#c8a870', sz:3,
+  });
+}
+function updateParticles() {
+  for(let i=particles.length-1;i>=0;i--) {
+    const p=particles[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=.04; p.life-=p.decay;
+    if(p.life<=0) particles.splice(i,1);
+  }
+  if(Math.random()<.02) {
+    const tx=Math.floor(Math.random()*MW), ty=Math.floor(Math.random()*MH);
+    if(worldMap[ty]?.[tx]===TID.TREE) particles.push({
+      x:tx*TS+Math.random()*TS, y:ty*TS+Math.random()*TS,
+      vx:(Math.random()-.5)*.8, vy:(Math.random()-.5)*.5,
+      life:1, decay:.015,
+      color:`hsl(${100+Math.random()*40},55%,${35+Math.random()*15}%)`, sz:3+Math.random()*2,
+    });
+  }
+}
+
+// ── Dialogue ──────────────────────────────────────────────────
+const dlg = { on:false, npc:null, idx:0 };
+function tryTalk() {
+  const px=Math.floor(player.x/TS), py=Math.floor(player.y/TS);
+  for(const n of npcs) {
+    const d=Math.hypot(px-Math.floor(n.x/TS), py-Math.floor(n.y/TS));
+    if(d<=1.6) { dlg.on=true; dlg.npc=n; dlg.idx=0; return; }
+  }
+}
+document.addEventListener('keydown', e => {
+  if(e.code==='KeyE'||e.code==='Space') {
+    if(dlg.on) { dlg.idx++; if(dlg.idx>=dlg.npc.msg.length){dlg.on=false;dlg.npc=null;} }
+    else tryTalk();
+  }
+  if(e.code==='KeyJ'||e.code==='KeyZ') doAttack();
+  if(e.code==='KeyI') player.showInventory=!player.showInventory;
+});
+C.addEventListener('click', e => {
+  if(!player.showInventory) return;
+  const rect=C.getBoundingClientRect();
+  handleInvClick((e.clientX-rect.left)*(SW/rect.width),(e.clientY-rect.top)*(SH/rect.height));
+});
+
+// ── Collision ─────────────────────────────────────────────────
+function canMove(px,py) {
+  const pts = [[px-10,py-6],[px+10,py-6],[px-10,py+10],[px+10,py+10]];
+  for(const [cx,cy] of pts) {
+    const tx=Math.floor(cx/TS), ty=Math.floor(cy/TS);
+    if(tx<0||tx>=MW||ty<0||ty>=MH) return false;
+    if(SOLID.has(worldMap[ty][tx])) return false;
+  }
+  return true;
+}
+
+// ── Update ────────────────────────────────────────────────────
+let tick=0, wfr=0, wft=0;
+
+function update() {
+  tick++;
+  wft++; if(wft>14) { wft=0; wfr=(wfr+1)%4; invalidateWater(); }
+
+  // Player movement
+  if(!dlg.on) {
+    let dx=0,dy=0;
+    if(keys['ArrowUp']   ||keys['KeyW']) dy=-1;
+    if(keys['ArrowDown'] ||keys['KeyS']) dy= 1;
+    if(keys['ArrowLeft'] ||keys['KeyA']) dx=-1;
+    if(keys['ArrowRight']||keys['KeyD']) dx= 1;
+    if(dx&&dy) { dx*=.707; dy*=.707; }
+    const mv = dx||dy;
+    if(mv) {
+      if(Math.abs(dx)>Math.abs(dy)) player.dir=dx>0?'right':'left';
+      else                           player.dir=dy>0?'down':'up';
+      const nx=player.x+dx*player.speed, ny=player.y+dy*player.speed;
+      if(canMove(nx,ny))               { player.x=nx; player.y=ny; }
+      else if(canMove(nx,player.y))    { player.x=nx; }
+      else if(canMove(player.x,ny))    { player.y=ny; }
+      if(Math.random()<.08) spawnDust(player.x, player.y+12);
+    }
+    player.moving = !!mv;
+    if(mv) { player.frameTimer++; if(player.frameTimer>4){ player.frameTimer=0; player.frame=(player.frame+1)%8; } }
+    else     player.frame=0;
+  }
+
+  updateCamera(player.x, player.y);
+
+  // NPC wander
+  for(const n of npcs) {
+    n.wt++; if(n.wt>100+Math.random()*80) { n.wt=0; const ds=['up','down','left','right','idle','idle']; n.wd=ds[Math.floor(Math.random()*ds.length)]; }
+    if(n.wd!=='idle') {
+      n.dir=n.wd;
+      const spd=.8;
+      let nx=n.x, ny=n.y;
+      if(n.wd==='up')    ny-=spd;
+      if(n.wd==='down')  ny+=spd;
+      if(n.wd==='left')  nx-=spd;
+      if(n.wd==='right') nx+=spd;
+      const tx=Math.floor(nx/TS), ty=Math.floor(ny/TS);
+      if(!SOLID.has(worldMap[ty]?.[tx])) { n.x=nx; n.y=ny; }
+      n.ft++; if(n.ft>6){ n.ft=0; n.frame=(n.frame+1)%8; }
+    }
+  }
+  updateParticles();
+  if(player.attackTimer>0) player.attackTimer--;
+  if(player.attackCooldown>0) player.attackCooldown--;
+  for(const e of enemies) {
+    if(!e.alive){ if(e.dieTimer>0)e.dieTimer--; continue; }
+    e.bt++; if(e.hitTimer>0)e.hitTimer--;
+  }
+  for(let i=dmgNums.length-1;i>=0;i--){
+    const d=dmgNums[i]; d.y+=d.vy; d.vy+=.05; d.life-=d.decay; if(d.life<=0)dmgNums.splice(i,1);
+  }
+}
+
+function invalidateWater() {
+  for(const k of Object.keys(tileCache)) if(k.startsWith('0_')||k.startsWith('1_')) delete tileCache[k];
+}
+
+// ── Character drawing ─────────────────────────────────────────
+function drawChar(wx,wy, dir,frm, pal, sword) {
+  const ox=wx-16, oy=wy-38;
+  const leg = Math.sin(frm*.8) * 4;
+
+  // Shadow
+  G.save(); G.globalAlpha=.25; G.fillStyle='#000';
+  G.beginPath(); G.ellipse(wx,wy+2,10,4,0,0,Math.PI*2); G.fill(); G.restore();
+
+  // Cape (behind body)
+  if(pal.cape) {
+    const cw=Math.sin(frm*.3)*2;
+    G.fillStyle=pal.cape;
+    G.fillRect(ox+3,oy+14,4,16+cw); G.fillRect(ox+25,oy+14,4,16-cw);
+  }
+
+  // Legs
+  G.fillStyle=pal.legs;
+  G.fillRect(ox+8, oy+28+(dir==='up'?leg:-leg), 6, 12);
+  G.fillRect(ox+18,oy+28+(dir==='up'?-leg:leg), 6, 12);
+
+  // Boots
+  G.fillStyle=pal.boots;
+  G.fillRect(ox+7, oy+38+(dir==='up'? leg:-leg), 8, 4);
+  G.fillRect(ox+17,oy+38+(dir==='up'?-leg: leg), 8, 4);
+
+  // Torso
+  G.fillStyle=pal.body;  G.fillRect(ox+6,oy+14,20,14);
+  G.fillStyle=pal.dark;  G.fillRect(ox+6,oy+24,20,4);
+
+  // Arms
+  const as=(dir==='down'||dir==='up')?leg*1.5:0;
+  G.fillStyle=pal.body;
+  G.fillRect(ox+2,oy+14+as,  4,10);
+  G.fillRect(ox+26,oy+14-as, 4,10);
+
+  // Chest detail
+  G.fillStyle=pal.detail;
+  if(dir!=='up') G.fillRect(ox+11,oy+14,10,8);
+
+  // Head
+  G.fillStyle=pal.hair; G.fillRect(ox+8,oy,  16,8);
+  G.fillStyle=pal.skin; G.fillRect(ox+8,oy+4,16,10);
+  G.fillStyle=pal.hair; G.fillRect(ox+8,oy+4,4,6); G.fillRect(ox+20,oy+4,4,6);
+
+  // Eyes / face direction
+  G.fillStyle='#1a1a28';
+  if(dir==='down')  { G.fillRect(ox+11,oy+8,3,3); G.fillRect(ox+18,oy+8,3,3); G.fillStyle='#c07060'; G.fillRect(ox+13,oy+13,6,2); }
+  if(dir==='right') G.fillRect(ox+18,oy+8,3,3);
+  if(dir==='left')  G.fillRect(ox+11,oy+8,3,3);
+
+  // Weapon
+  if(sword) {
+    const bc=sword.bladeColor||'#c0c8d0', gc=sword.guardColor||'#c09020', ln=sword.len||20;
+    G.fillStyle=bc;
+    if(dir==='right') { G.fillRect(wx+14,oy+14,3,ln); G.fillStyle=gc; G.fillRect(wx+12,oy+18,7,3); }
+    if(dir==='left')  { G.fillRect(ox-5, oy+14,3,ln); G.fillStyle=gc; G.fillRect(ox-7, oy+18,7,3); }
+    if(dir==='down')  { G.fillRect(wx+10,oy+18,3,ln); G.fillStyle=gc; G.fillRect(wx+8, oy+22,7,3); }
+    if(dir==='up')    { G.fillRect(wx+10,oy+4, 3,ln); G.fillStyle=gc; G.fillRect(wx+8, oy+8, 7,3); }
+  }
+}
+
+// ── HUD helpers ───────────────────────────────────────────────
+function panel(x,y,w,h) {
+  G.fillStyle='rgba(6,6,18,.88)'; G.fillRect(x,y,w,h);
+  G.strokeStyle='#c8a050'; G.lineWidth=2; G.strokeRect(x+1,y+1,w-2,h-2);
+  G.strokeStyle='rgba(200,160,80,.25)'; G.lineWidth=1; G.strokeRect(x+4,y+4,w-8,h-8);
+  const cs=6; G.fillStyle='#c8a050';
+  [[x+2,y+2],[x+w-cs-2,y+2],[x+2,y+h-cs-2],[x+w-cs-2,y+h-cs-2]].forEach(([cx,cy])=>{
+    G.fillRect(cx,cy,cs,2); G.fillRect(cx,cy,2,cs);
+  });
+}
+
+function statBar(x,y,w,h,pct,col,bg,lbl) {
+  G.fillStyle=bg; G.fillRect(x,y,w,h);
+  const gr=G.createLinearGradient(x,y,x,y+h);
+  gr.addColorStop(0,col); gr.addColorStop(1,shade(col,-35));
+  G.fillStyle=gr; G.fillRect(x,y,w*Math.max(0,Math.min(1,pct)),h);
+  G.fillStyle='rgba(255,255,255,.18)'; G.fillRect(x,y,w*pct,3);
+  G.fillStyle='rgba(255,255,255,.85)'; G.font='6px "Press Start 2P"'; G.fillText(lbl,x+3,y+h-2);
+}
+
+function shade(hex,p) {
+  const n=parseInt(hex.slice(1),16);
+  const r=Math.max(0,Math.min(255,(n>>16)+p));
+  const g=Math.max(0,Math.min(255,((n>>8)&0xff)+p));
+  const b=Math.max(0,Math.min(255,(n&0xff)+p));
+  return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0');
+}
+
+function wrapText(text,x,y,maxW,lh) {
+  const words=text.split(' '); let line='', cy=y;
+  for(const w of words) {
+    const test=line+(line?' ':'')+w;
+    if(G.measureText(test).width>maxW&&line) { G.fillText(line,x,cy); line=w; cy+=lh; }
+    else line=test;
+  }
+  if(line) G.fillText(line,x,cy);
+}
+
+// ── HUD ───────────────────────────────────────────────────────
+function drawHUD() {
+  // ── Character panel (top-left) ──
+  panel(8,8,228,86);
+
+  // Avatar
+  G.fillStyle='#8a6030'; G.beginPath(); G.arc(42,50,26,0,Math.PI*2); G.fill();
+  G.fillStyle='#c8a050'; G.beginPath(); G.arc(42,50,22,0,Math.PI*2); G.fill();
+  G.fillStyle='#f5c5a3'; G.beginPath(); G.arc(42,46,9,0,Math.PI*2); G.fill();
+  G.fillStyle='#4a3728'; G.fillRect(36,38,12,5); G.fillRect(36,43,4,5); G.fillRect(44,43,4,5);
+  G.fillStyle='#1a1a28'; G.fillRect(38,45,3,3); G.fillRect(43,45,3,3);
+
+  // Name & level
+  G.fillStyle='#f0d080'; G.font='8px "Press Start 2P"'; G.fillText(player.name,74,27);
+  G.fillStyle='#c8a050'; G.fillRect(74,31,72,14);
+  G.fillStyle='#0a0a14'; G.font='7px "Press Start 2P"'; G.fillText(`LV.${player.level}`,79,42);
+
+  statBar(74,51,152,11, player.hp/player.maxHp, '#e03030','#5a0a0a', `HP ${player.hp}/${player.maxHp}`);
+  statBar(74,67,152,11, player.mp/player.maxMp, '#3060e0','#0a1a5a', `MP ${player.mp}/${player.maxMp}`);
+
+  // ── Gold (top-right) ──
+  panel(SW-138,8,130,38);
+  G.fillStyle='#ffd040'; G.font='12px "Press Start 2P"'; G.fillText('G',SW-128,31);
+  G.fillStyle='#f0d070'; G.font='9px "Press Start 2P"'; G.fillText(player.gold.toLocaleString(),SW-110,31);
+
+  // ── EXP bar (bottom) ──
+  G.fillStyle='rgba(0,0,0,.72)'; G.fillRect(0,SH-20,SW,20);
+  G.fillStyle='#1a0e04'; G.fillRect(4,SH-15,SW-8,12);
+  const eg=G.createLinearGradient(4,0,SW,0);
+  eg.addColorStop(0,'#8a3a10'); eg.addColorStop(.5,'#e09030'); eg.addColorStop(1,'#f0c060');
+  G.fillStyle=eg; G.fillRect(4,SH-15,(SW-8)*(player.exp/player.maxExp),12);
+  G.fillStyle='rgba(255,255,255,.15)'; G.fillRect(4,SH-15,(SW-8)*(player.exp/player.maxExp),4);
+  G.fillStyle='#f0d080'; G.font='7px "Press Start 2P"'; G.textAlign='center';
+  G.fillText(`EXP  ${player.exp} / ${player.maxExp}`,SW/2,SH-6);
+  G.textAlign='left';
+
+  // ── Minimap ──
+  drawMiniMap();
+
+  // ── Controls hint ──
+  G.fillStyle='rgba(0,0,0,.55)'; G.fillRect(SW/2-152,8,304,20);
+  G.strokeStyle='rgba(200,160,80,.4)'; G.lineWidth=1; G.strokeRect(SW/2-152,8,304,20);
+  G.fillStyle='#9090b8'; G.font='6px "Press Start 2P"'; G.textAlign='center';
+  G.fillText('WASD MOVE  E TALK  J/Z ATTACK  I ITEMS',SW/2,21);
+  G.textAlign='left';
+}
+
+function drawMiniMap() {
+  const MX=SW-116,MY=SH-108, MMW=108,MMH=88;
+  panel(MX-4,MY-4,MMW+8,MMH+8);
+  const sx=MMW/MW, sy=MMH/MH;
+  const MMCOL = {
+    [TID.DEEP]:'#0a1e3a',[TID.WATER]:'#1a4a7a',[TID.SAND]:'#b89050',
+    [TID.GRASS]:'#2d6035',[TID.FGRASS]:'#358040',[TID.PATH]:'#6a5a45',
+    [TID.COBB]:'#505060',[TID.TREE]:'#145020',[TID.WALL]:'#6a5a50',
+    [TID.FLOOR]:'#7a6050',[TID.MOUNT]:'#454555',[TID.SNOW]:'#b0c0d0',
+    [TID.TGRASS]:'#3a7040',[TID.DOOR]:'#6a4a28',
+  };
+  for(let ty=0;ty<MH;ty++) for(let tx=0;tx<MW;tx++) {
+    G.fillStyle=MMCOL[worldMap[ty][tx]]??'#2d6035';
+    G.fillRect(MX+tx*sx, MY+ty*sy, Math.ceil(sx)+.5, Math.ceil(sy)+.5);
+  }
+  // Viewport rect
+  G.strokeStyle='rgba(255,255,255,.35)'; G.lineWidth=1;
+  G.strokeRect(MX+(cam.x/TS)*sx, MY+(cam.y/TS)*sy, (SW/TS)*sx, (SH/TS)*sy);
+  // NPCs
+  for(const n of npcs) { G.fillStyle=n.color; G.fillRect(MX+(n.x/TS)*sx-1,MY+(n.y/TS)*sy-1,3,3); }
+  // Player
+  G.fillStyle='#f0f040'; G.beginPath(); G.arc(MX+(player.x/TS)*sx, MY+(player.y/TS)*sy, 2.5,0,Math.PI*2); G.fill();
+  // Label
+  G.fillStyle='#f0d080'; G.font='6px "Press Start 2P"'; G.textAlign='center';
+  G.fillText('MAP', MX+MMW/2, MY+MMH+12);
+  G.textAlign='left';
+}
+
+// ── Dialogue ──────────────────────────────────────────────────
+function drawDialogue() {
+  if(!dlg.on||!dlg.npc) return;
+  const DW=SW-40, DH=100, DX=20, DY=SH-DH-24;
+  panel(DX,DY,DW,DH);
+  G.fillStyle=dlg.npc.color; G.font='9px "Press Start 2P"'; G.fillText(dlg.npc.name,DX+14,DY+20);
+  G.fillStyle='rgba(200,160,80,.4)'; G.fillRect(DX+10,DY+25,DW-20,1);
+  G.fillStyle='#e0d8c0'; G.font='9px "Press Start 2P"';
+  wrapText(dlg.npc.msg[dlg.idx]??'',DX+14,DY+44,DW-28,18);
+  if(Math.floor(Date.now()/400)%2===0) {
+    G.fillStyle='#f0d080'; G.font='8px "Press Start 2P"';
+    G.fillText('▼ press E',DX+DW-110,DY+DH-12);
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────
+function render() {
+  G.fillStyle='#000010'; G.fillRect(0,0,SW,SH);
+
+  G.save();
+  G.translate(-cam.x, -cam.y);
+
+  // Tiles
+  const tx0=Math.max(0,Math.floor(cam.x/TS));
+  const ty0=Math.max(0,Math.floor(cam.y/TS));
+  const tx1=Math.min(MW,tx0+Math.ceil(SW/TS)+1);
+  const ty1=Math.min(MH,ty0+Math.ceil(SH/TS)+1);
+  for(let ty=ty0;ty<ty1;ty++) for(let tx=tx0;tx<tx1;tx++)
+    G.drawImage(getTile(worldMap[ty][tx], worldMap[ty][tx]<=1?wfr:0), tx*TS, ty*TS);
+
+  // Particles (behind characters)
+  for(const p of particles) {
+    G.globalAlpha=p.life*.5; G.fillStyle=p.color;
+    G.fillRect(p.x-p.sz/2, p.y-p.sz/2, p.sz, p.sz);
+  }
+  G.globalAlpha=1;
+
+  // Sort entities by Y (depth)
+  const liveEnemies=enemies.filter(e=>e.alive||e.dieTimer>0).map(e=>({y:e.y,t:'enemy',d:e}));
+  const ents=[...npcs.map(n=>({y:n.y,t:'npc',d:n})), {y:player.y,t:'player',d:player}, ...liveEnemies];
+  ents.sort((a,b)=>a.y-b.y);
+
+  for(const e of ents) {
+    if(e.t==='player') {
+      const arId=player.equipment.armor, arIt=arId?ITEMS[arId]:null;
+      const bc=arIt?arIt.bodyColor:'#4a85b5';
+      const pPal={body:bc,dark:shade(bc,-35),skin:'#f5c5a3',hair:'#4a3728',detail:shade(bc,45),legs:arIt?shade(bc,-55):'#2d3d6a',boots:'#3a2a18',cape:'#c03030'};
+      const wId=player.equipment.weapon, wObj=wId?ITEMS[wId]:{bladeColor:'#c0c8d0',guardColor:'#c09020',len:20};
+      drawChar(player.x,player.y,player.dir,player.frame,pPal,wObj);
+      drawAttackSwing(player.x,player.y);
+    } else if(e.t==='enemy') {
+      drawEnemy(e.d);
+    } else {
+      const n=e.d;
+      drawChar(n.x, n.y, n.dir, n.frame,
+        {body:n.color,dark:shade(n.color,-45),skin:'#e8b898',hair:n.hair,detail:shade(n.color,30),legs:'#3a3a4a',boots:'#2a1a10',cape:null},
+        false);
+      // Name tag (proximity)
+      const dist=Math.hypot(n.x-player.x, n.y-player.y);
+      if(dist<TS*3.5) {
+        G.font='7px "Press Start 2P"';
+        const nw=G.measureText(n.name).width;
+        G.fillStyle='rgba(0,0,0,.72)'; G.fillRect(n.x-nw/2-5,n.y-42,nw+10,14);
+        G.fillStyle=n.color; G.textAlign='center'; G.fillText(n.name,n.x,n.y-31); G.textAlign='left';
+        if(dist<TS*1.8) {
+          G.fillStyle='rgba(0,0,0,.8)'; G.fillRect(n.x-16,n.y-56,32,13);
+          G.fillStyle='#f0f040'; G.textAlign='center'; G.font='7px "Press Start 2P"';
+          G.fillText('[E]',n.x,n.y-46); G.textAlign='left';
+        }
+      }
+    }
+  }
+
+  // Foreground particles
+  for(const p of particles) {
+    G.globalAlpha=p.life*.3; G.fillStyle=p.color;
+    G.beginPath(); G.arc(p.x,p.y,p.sz*.5,0,Math.PI*2); G.fill();
+  }
+  G.globalAlpha=1;
+
+  // Damage numbers (in world space)
+  for(const d of dmgNums) {
+    G.save(); G.globalAlpha=Math.min(1,d.life*.9);
+    G.font=d.crit?'10px "Press Start 2P"':'8px "Press Start 2P"';
+    G.fillStyle=d.crit?'#ffd040':'#ff5050';
+    G.textAlign='center'; G.fillText((d.crit?'★':'')+d.val,d.x,d.y);
+    G.textAlign='left'; G.restore();
+  }
+
+  G.restore();
+
+  // Vignette
+  const vig=G.createRadialGradient(SW/2,SH/2,SW*.28,SW/2,SH/2,SW*.72);
+  vig.addColorStop(0,'rgba(0,0,0,0)'); vig.addColorStop(1,'rgba(0,0,20,.6)');
+  G.fillStyle=vig; G.fillRect(0,0,SW,SH);
+
+  // HUD
+  drawHUD();
+  drawDialogue();
+  drawInventoryPanel();
+
+  // Intro fade
+  if(tick<200) {
+    const a=tick<80?tick/80:tick>170?(200-tick)/30:1;
+    G.globalAlpha=a;
+    G.fillStyle='rgba(0,0,0,.65)'; G.fillRect(SW/2-230,SH/2-45,460,82);
+    G.strokeStyle='#c8a050'; G.lineWidth=2; G.strokeRect(SW/2-228,SH/2-43,456,78);
+    G.fillStyle='#f0d080'; G.font='20px "Press Start 2P"'; G.textAlign='center';
+    G.fillText('ELDORIA CHRONICLES',SW/2,SH/2-8);
+    G.fillStyle='#9090b8'; G.font='8px "Press Start 2P"';
+    G.fillText('A legend is born…',SW/2,SH/2+20);
+    G.textAlign='left'; G.globalAlpha=1;
+  }
+}
+
+// ── Game loop ─────────────────────────────────────────────────
+function loop() { update(); render(); requestAnimationFrame(loop); }
+
+cam.x = player.x - SW/2;
+cam.y = player.y - SH/2;
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
