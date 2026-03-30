@@ -57,17 +57,22 @@ const JV1      = -15.5; // first jump
 const JV2      = -12.5; // double jump
 const BASE_SPD = 5.5;
 const MAX_SPD  = 16;
+let goalDist = +localStorage.getItem('nrGoalDist') || 3000; // grows +1000 each win
 
 // ── Game State ─────────────────────────────────────────────────────────────────
-let mode = 'start'; // start | play | dying | over
+let mode = 'start'; // start | play | dying | over | won
 let score = 0, best = +localStorage.getItem('nrBest') || 0;
-let spd, tick, shakeTick, shakeAmt;
+let spd, tick, scrolled, shakeTick, shakeAmt;
 
 // ── Entities ───────────────────────────────────────────────────────────────────
 let pl     = null;
 let obs    = [], plats = [], sparks = [];
 let bgLayers = [[], []], stars = [];
 let _nObs  = 90, _nPlat = 140;
+let goalLine = null; // finish line object: { x, glow } | null
+let grounds = [], coins = [], walkers = [];
+let groundEdge = W + 800, coinBonus = 0;
+let enemies = [], _nEnemy = 250; // flying drone enemies
 
 // ── Input ──────────────────────────────────────────────────────────────────────
 const K = Object.create(null);
@@ -80,7 +85,7 @@ window.addEventListener('keyup', e => { K[e.code] = false; });
 cv.addEventListener('pointerdown', e => { e.preventDefault(); doJump(); });
 
 function doJump() {
-  if (mode === 'start' || mode === 'over') { beginGame(); return; }
+  if (mode === 'start' || mode === 'over' || mode === 'won') { beginGame(); return; }
   if (mode !== 'play' || !pl || !pl.alive) return;
   if (pl.jumps > 0) {
     pl.vy = pl.jumps === 2 ? JV1 : JV2;
@@ -127,7 +132,7 @@ function mkBG() {
 
 // ── Game Init ──────────────────────────────────────────────────────────────────
 function beginGame() {
-  spd = BASE_SPD; tick = 0; score = 0;
+  spd = BASE_SPD; tick = 0; score = 0; scrolled = 0;
   shakeTick = 0; shakeAmt = 0;
   pl = {
     x: 110, y: GY - 62, w: 30, h: 62,
@@ -136,39 +141,78 @@ function beginGame() {
     alive: true, runTick: 0,
     trail: []
   };
-  obs = []; plats = []; sparks = [];
-  _nObs  = 65  + ~~(Math.random() * 35);
-  _nPlat = 110 + ~~(Math.random() * 70);
+  obs = []; plats = []; sparks = []; goalLine = null;
+  grounds = [{ x: -200, y: GY, w: W + 1000, h: 20 }];
+  groundEdge = W + 800; coinBonus = 0; coins = []; walkers = [];
+  enemies = []; _nEnemy = 220 + ~~(Math.random() * 80);
   mkBG();
   mode = 'play';
 }
 
 // ── Spawning ───────────────────────────────────────────────────────────────────
 function spawnTick() {
-  _nObs--;
-  if (_nObs <= 0) {
-    const r = Math.random();
-    if (r < 0.34) {
-      // Spikes (1–3)
-      const n = 1 + (spd > 8 ? ~~(Math.random() * 3) : ~~(Math.random() * 2));
-      for (let i = 0; i < n; i++)
-        obs.push({ x: W + 20 + i * 27, y: GY - 30, w: 22, h: 30, t: 'spike' });
-    } else if (r < 0.58) {
-      // Short wall – must jump over
-      obs.push({ x: W + 20, y: GY - 56, w: 22, h: 56, t: 'wall' });
+  if (goalLine) return;
+
+  // Continuous ground-segment generation
+  while (groundEdge < W + 450) {
+    if (Math.random() < 0.28) {
+      // ── Gap ──
+      const gapW = 88 + ~~(Math.random() * 80);
+      // Bridge platform over gap
+      if (Math.random() < 0.70) {
+        plats.push({ x: groundEdge + 5, y: GY - 105 - ~~(Math.random() * 60), w: Math.max(gapW - 10, 72), h: 12 });
+      }
+      // Coin arc over gap
+      if (Math.random() < 0.55) {
+        const n = 3 + ~~(Math.random() * 3);
+        for (let i = 0; i < n; i++)
+          coins.push({ x: groundEdge + 12 + i * (gapW / n), y: GY - 75 - Math.sin(Math.PI * i / (n - 1)) * 38, collected: false });
+      }
+      groundEdge += gapW;
     } else {
-      // Tall wall – must slide under (gap at bottom: GY-40 to GY)
-      obs.push({ x: W + 20, y: GY - 116, w: 26, h: 76, t: 'tallwall' });
+      // ── Ground segment ──
+      const segW = 210 + ~~(Math.random() * 240);
+      grounds.push({ x: groundEdge, y: GY, w: segW, h: 20 });
+
+      // Obstacle on segment
+      if (segW > 100 && Math.random() < 0.22) {
+        const ox = groundEdge + 35 + ~~(Math.random() * Math.max(1, segW - 70));
+        const r = Math.random();
+        if (r < 0.4) {
+          const n = 1 + (spd > 10 ? ~~(Math.random() * 2) : 0);
+          for (let i = 0; i < n; i++)
+            obs.push({ x: ox + i * 27, y: GY - 30, w: 22, h: 30, t: 'spike' });
+        } else if (r < 0.7) {
+          obs.push({ x: ox, y: GY - 56, w: 22, h: 56, t: 'wall' });
+        } else {
+          obs.push({ x: ox, y: GY - 116, w: 26, h: 76, t: 'tallwall' });
+        }
+      }
+
+      // Elevated platform
+      if (Math.random() < 0.42) {
+        plats.push({ x: groundEdge + ~~(Math.random() * Math.max(1, segW - 80)), y: GY - 100 - ~~(Math.random() * 80), w: 70 + ~~(Math.random() * 90), h: 12 });
+      }
+
+      // Coins on segment (linear row)
+      if (Math.random() < 0.62) {
+        const n = 2 + ~~(Math.random() * 5);
+        const cx0 = groundEdge + 25 + ~~(Math.random() * Math.max(1, segW - 50 - n * 35));
+        for (let i = 0; i < n; i++)
+          coins.push({ x: cx0 + i * 35, y: GY - 52, collected: false });
+      }
+
+      groundEdge += segW;
     }
-    _nObs = 50 + ~~(Math.random() * 56);
-    if (spd >= 9)  _nObs = Math.max(36, ~~(_nObs * 0.80));
-    if (spd >= 13) _nObs = Math.max(28, ~~(_nObs * 0.85));
   }
 
-  _nPlat--;
-  if (_nPlat <= 0) {
-    plats.push({ x: W + 20, y: GY - 108 - Math.random() * 88, w: 80 + Math.random() * 96, h: 12 });
-    _nPlat = 100 + ~~(Math.random() * 110);
+  // Drone enemies
+  _nEnemy--;
+  if (_nEnemy <= 0) {
+    const ey = GY - 72 - Math.random() * 158;
+    enemies.push({ x: W + 28, y: ey, baseY: ey, phase: Math.random() * Math.PI * 2, extraSpd: 1.6 + Math.random() * 1.4 });
+    _nEnemy = 130 + ~~(Math.random() * 130);
+    if (spd >= 9) _nEnemy = Math.max(90, ~~(_nEnemy * 0.82));
   }
 }
 
@@ -198,6 +242,32 @@ function emitDeath() {
   }
 }
 
+function emitWin() {
+  for (let i = 0; i < 70; i++) {
+    const a = (Math.PI * 2 * i / 70) + Math.random() * 0.2;
+    const v = 2 + Math.random() * 10;
+    sparks.push({
+      x: pl.x + pl.w * .5, y: pl.y + pl.h * .5,
+      vx: Math.cos(a) * v, vy: Math.sin(a) * v - 3,
+      life: 70 + ~~(Math.random() * 50), maxLife: 120,
+      col: `hsl(${~~(Math.random() * 360)}, 100%, 68%)`
+    });
+  }
+}
+
+function emitCoinSpark(x, y) {
+  for (let i = 0; i < 10; i++) {
+    const a = (Math.PI * 2 * i / 10) + Math.random() * 0.4;
+    const v = 2 + Math.random() * 4;
+    sparks.push({
+      x, y,
+      vx: Math.cos(a) * v, vy: Math.sin(a) * v - 2,
+      life: 20 + ~~(Math.random() * 15), maxLife: 35,
+      col: `hsl(${45 + ~~(Math.random() * 30)}, 100%, 70%)`
+    });
+  }
+}
+
 // ── Collision ──────────────────────────────────────────────────────────────────
 function hit(ax, ay, aw, ah, bx, by, bw, bh) {
   return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
@@ -211,10 +281,16 @@ function update() {
     if (shakeTick > 0) shakeTick--;
     return;
   }
+  if (mode === 'won') {
+    for (const s of sparks) { s.x += s.vx; s.y += s.vy; s.vy += .3; s.life--; }
+    sparks = sparks.filter(s => s.life > 0);
+    return;
+  }
   if (mode !== 'play') return;
 
   tick++;
-  score = ~~(tick * spd / 8);
+  scrolled += spd;
+  score = ~~(tick * spd / 8) + coinBonus;
   if (score > best) { best = score; localStorage.setItem('nrBest', best); }
 
   // Gradually speed up
@@ -230,8 +306,21 @@ function update() {
   pl.y  += pl.vy;
   pl.runTick++;
 
-  // Ground
-  if (pl.y + pl.h >= GY) { pl.y = GY - pl.h; pl.vy = 0; pl.jumps = 2; }
+  // Ground segment collision (platform runner – no solid floor)
+  let onGround = false;
+  if (pl.vy >= 0) {
+    for (const g of grounds) {
+      if (pl.x + pl.w - 4 > g.x && pl.x + 4 < g.x + g.w
+          && pl.y + pl.h >= g.y && pl.y + pl.h <= g.y + g.h + 4 + pl.vy) {
+        pl.y = g.y - pl.h; pl.vy = 0; pl.jumps = 2; onGround = true; break;
+      }
+    }
+  }
+  // Fall into abyss → death
+  if (!onGround && pl.y > GY + 110) {
+    pl.alive = false; emitDeath(); mode = 'dying';
+    setTimeout(() => { mode = 'over'; }, 1250); return;
+  }
 
   // Platform landing
   for (const p of plats) {
@@ -265,11 +354,62 @@ function update() {
     }
   }
 
+  // Enemy collision
+  for (const e of enemies) {
+    if (hit(hX, hY, hW, hH, e.x - 13, e.y - 13, 26, 26)) {
+      pl.alive = false;
+      emitDeath();
+      mode = 'dying';
+      setTimeout(() => { mode = 'over'; }, 1250);
+      return;
+    }
+  }
+
+  // Walker collision (removed)
+
+  // Coin collection
+  for (const c of coins) {
+    if (!c.collected && hit(pl.x, pl.y, pl.w, pl.h, c.x - 9, c.y - 9, 18, 18)) {
+      c.collected = true; coinBonus += 30; emitCoinSpark(c.x, c.y);
+    }
+  }
+
   // Scroll world
   for (const o of obs)    o.x -= spd;
   for (const p of plats)  p.x -= spd;
   obs   = obs.filter(o   => o.x + o.w > -20);
   plats = plats.filter(p => p.x + p.w > -20);
+
+  // Move & update enemies
+  for (const e of enemies) {
+    e.x -= spd + e.extraSpd;
+    e.phase += 0.055;
+    e.y = e.baseY + Math.sin(e.phase) * 20;
+  }
+  enemies = enemies.filter(e => e.x > -40);
+
+  // Scroll grounds, coins, walkers
+  for (const g of grounds) g.x -= spd;
+  grounds = grounds.filter(g => g.x + g.w > -20);
+  groundEdge -= spd;
+  for (const c of coins) c.x -= spd;
+  coins = coins.filter(c => c.x > -20 && !c.collected);
+
+  // Spawn finish line when ~775px of scroll remain(goal line enters right edge of screen)
+  if (!goalLine && scrolled >= goalDist - 775) goalLine = { x: W, glow: 0 };
+
+  // Move finish line & detect win
+  if (goalLine) {
+    goalLine.x -= spd;
+    goalLine.glow += 0.07;
+    if (pl.x + pl.w * 0.5 >= goalLine.x + 12) {
+      goalDist += 1000;
+      localStorage.setItem('nrGoalDist', goalDist);
+      emitWin();
+      mode = 'won';
+      return;
+    }
+  }
 
   // Drone float (none remaining)
 
@@ -338,36 +478,59 @@ function drawBuilding(b) {
   for (const w of b.wins) cx.fillRect(b.x + w.ox, b.y + w.oy, 6, 9);
 }
 
-// ── Draw: Ground ──────────────────────────────────────────────────────────────
-function drawGround() {
-  const gG = cx.createLinearGradient(0, GY, 0, H);
-  gG.addColorStop(0, '#0c1e30');
-  gG.addColorStop(1, '#060e18');
-  cx.fillStyle = gG;
+// ── Draw: Ground Segments (Platform Runner) ───────────────────────────────────
+function drawGrounds() {
+  // Abyss void
+  cx.fillStyle = '#00000c';
   cx.fillRect(0, GY, W, H - GY);
-
-  // Neon edge
+  // Danger glow at bottom
   cx.save();
-  const eg = cx.createLinearGradient(0, GY - 5, 0, GY + 24);
-  eg.addColorStop(0,  'rgba(0,210,255,0.65)');
-  eg.addColorStop(.4, 'rgba(0,130,255,0.20)');
-  eg.addColorStop(1,  'rgba(0,0,0,0)');
-  cx.fillStyle = eg;
-  cx.fillRect(0, GY - 5, W, 29);
+  const abG = cx.createLinearGradient(0, H - 50, 0, H);
+  abG.addColorStop(0, 'rgba(0,0,0,0)');
+  abG.addColorStop(1, 'rgba(160,0,20,0.35)');
+  cx.fillStyle = abG; cx.fillRect(0, H - 50, W, 50);
   cx.restore();
 
-  // Scrolling perspective grid
-  cx.save();
-  cx.globalAlpha = 0.07;
-  cx.strokeStyle = '#00aaff'; cx.lineWidth = 1;
-  const off = (tick * spd) % 44;
-  for (let x = -off; x < W; x += 44) {
-    cx.beginPath(); cx.moveTo(x, GY); cx.lineTo(x, H); cx.stroke();
+  for (const g of grounds) {
+    // Body
+    cx.fillStyle = '#091a28';
+    cx.fillRect(g.x, g.y, g.w, g.h);
+    // Neon top edge
+    cx.save();
+    cx.shadowColor = 'rgba(0,200,255,0.7)'; cx.shadowBlur = 10;
+    const eg = cx.createLinearGradient(g.x, g.y - 4, g.x, g.y + 16);
+    eg.addColorStop(0, 'rgba(0,210,255,0.72)');
+    eg.addColorStop(0.45, 'rgba(0,120,220,0.22)');
+    eg.addColorStop(1, 'rgba(0,0,0,0)');
+    cx.fillStyle = eg;
+    cx.fillRect(g.x, g.y - 4, g.w, 20);
+    cx.restore();
+    // Vertical grid lines on surface
+    cx.save();
+    cx.globalAlpha = 0.06;
+    cx.strokeStyle = '#00aaff'; cx.lineWidth = 1;
+    const off = (tick * spd) % 44;
+    for (let vx = g.x - ((g.x - off) % 44 + 44) % 44; vx < g.x + g.w; vx += 44) {
+      if (vx < g.x) continue;
+      cx.beginPath(); cx.moveTo(vx, g.y); cx.lineTo(vx, g.y + g.h); cx.stroke();
+    }
+    cx.restore();
   }
-  for (let y = GY + 22; y < H; y += 22) {
-    cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke();
+}
+
+// ── Draw: Coins ───────────────────────────────────────────────────────────────
+function drawCoins() {
+  for (const c of coins) {
+    if (c.collected) continue;
+    cx.save();
+    const bob = Math.sin(tick * 0.08 + c.x * 0.05) * 3;
+    cx.shadowColor = '#ffcc00'; cx.shadowBlur = 16;
+    cx.fillStyle = '#ffcc00';
+    cx.beginPath(); cx.arc(c.x, c.y + bob, 8, 0, Math.PI * 2); cx.fill();
+    cx.fillStyle = 'rgba(255,255,180,0.75)';
+    cx.beginPath(); cx.arc(c.x - 2, c.y + bob - 2, 3, 0, Math.PI * 2); cx.fill();
+    cx.restore();
   }
-  cx.restore();
 }
 
 // ── Draw: Platforms ───────────────────────────────────────────────────────────
@@ -389,6 +552,62 @@ function drawPlatforms() {
     cx.fillRect(p.x - 4, p.y + p.h, p.w + 8, 22);
     cx.restore();
   }
+}
+
+// ── Draw: Goal Line ───────────────────────────────────────────────────────────
+function drawGoalLine() {
+  if (!goalLine) return;
+  const gx = goalLine.x;
+  const pulse = 0.6 + 0.4 * Math.sin(goalLine.glow * 2);
+  cx.save();
+
+  // Energy field fill
+  const ef = cx.createLinearGradient(gx - 2, 0, gx + 28, 0);
+  ef.addColorStop(0,   `rgba(0,255,180,${0.03 * pulse})`);
+  ef.addColorStop(0.5, `rgba(0,255,180,${0.10 * pulse})`);
+  ef.addColorStop(1,   `rgba(0,255,180,${0.03 * pulse})`);
+  cx.fillStyle = ef;
+  cx.fillRect(gx - 2, 0, 32, GY);
+
+  // Horizontal sweep lines
+  cx.globalAlpha = 0.15 * pulse;
+  cx.strokeStyle = '#00ffcc';
+  cx.lineWidth = 1;
+  const sweep = (tick * 0.5) % 30;
+  for (let sy = -sweep; sy < GY; sy += 30) {
+    cx.beginPath(); cx.moveTo(gx - 2, sy); cx.lineTo(gx + 28, sy); cx.stroke();
+  }
+  cx.globalAlpha = 1;
+
+  // Left post
+  cx.shadowColor = '#00ffcc'; cx.shadowBlur = 18 * pulse;
+  cx.strokeStyle = `rgba(0,255,200,${0.8 + 0.2 * pulse})`;
+  cx.lineWidth = 5;
+  cx.beginPath(); cx.moveTo(gx, 0); cx.lineTo(gx, GY); cx.stroke();
+
+  // Right post
+  cx.beginPath(); cx.moveTo(gx + 24, 0); cx.lineTo(gx + 24, GY); cx.stroke();
+
+  // Center beam
+  cx.shadowBlur = 20 * pulse;
+  cx.shadowColor = '#aaffee';
+  cx.strokeStyle = `rgba(180,255,230,${0.3 * pulse})`;
+  cx.lineWidth = 2;
+  cx.beginPath(); cx.moveTo(gx + 12, 0); cx.lineTo(gx + 12, GY); cx.stroke();
+
+  // GOAL banner
+  cx.shadowColor = '#00ffcc'; cx.shadowBlur = 20;
+  cx.fillStyle = 'rgba(0,30,20,0.85)';
+  cx.fillRect(gx - 28, 8, 80, 32);
+  cx.strokeStyle = `rgba(0,255,180,${0.6 + 0.4 * pulse})`;
+  cx.lineWidth = 1.5;
+  cx.strokeRect(gx - 28, 8, 80, 32);
+  cx.font = 'bold 13px Orbitron, monospace';
+  cx.fillStyle = `rgba(0,255,200,${0.8 + 0.2 * pulse})`;
+  cx.textAlign = 'center';
+  cx.fillText('GOAL', gx + 12, 30);
+
+  cx.restore();
 }
 
 // ── Draw: Obstacles ───────────────────────────────────────────────────────────
@@ -427,6 +646,46 @@ function drawObstacles() {
       cx.strokeStyle = 'rgba(255,100,0,0.5)'; cx.lineWidth = 1.5;
       cx.strokeRect(o.x + .5, o.y + .5, o.w - 1, o.h - 1);
 
+    }
+    cx.restore();
+  }
+}
+
+// ── Draw: Enemies ─────────────────────────────────────────────────────────────
+function drawEnemies() {
+  for (const e of enemies) {
+    cx.save();
+    // Body (magenta diamond)
+    cx.shadowColor = '#ff00bb'; cx.shadowBlur = 20;
+    cx.fillStyle = '#990055';
+    cx.beginPath();
+    cx.moveTo(e.x,      e.y - 16);
+    cx.lineTo(e.x + 16, e.y);
+    cx.lineTo(e.x,      e.y + 16);
+    cx.lineTo(e.x - 16, e.y);
+    cx.closePath(); cx.fill();
+    // Inner core
+    cx.shadowBlur = 10;
+    cx.fillStyle = '#ff44cc';
+    cx.beginPath();
+    cx.moveTo(e.x,     e.y - 8);
+    cx.lineTo(e.x + 8, e.y);
+    cx.lineTo(e.x,     e.y + 8);
+    cx.lineTo(e.x - 8, e.y);
+    cx.closePath(); cx.fill();
+    // Center eye
+    cx.fillStyle = '#fff';
+    cx.beginPath(); cx.arc(e.x, e.y, 3, 0, Math.PI * 2); cx.fill();
+    // Scan beam toward player
+    const beamLen = Math.min(90, e.x - (pl ? pl.x + pl.w : 0));
+    if (beamLen > 5) {
+      cx.globalAlpha = 0.22;
+      cx.strokeStyle = '#ff00bb';
+      cx.lineWidth = 1.5;
+      cx.beginPath();
+      cx.moveTo(e.x - 16, e.y);
+      cx.lineTo(e.x - 16 - beamLen, e.y);
+      cx.stroke();
     }
     cx.restore();
   }
@@ -510,6 +769,13 @@ function drawHUD() {
   cx.fillStyle = 'rgba(0,200,255,0.45)';
   cx.fillText('SCORE', 20, 52);
 
+  // Coin count
+  cx.shadowColor = '#ffcc00'; cx.shadowBlur = 7;
+  cx.font = 'bold 13px Orbitron, monospace';
+  cx.fillStyle = 'rgba(255,210,50,0.90)';
+  cx.fillText(`⬡ ${(coinBonus / 30) | 0}`, 20, 70);
+  cx.shadowBlur = 0;
+
   // Best
   cx.font = 'bold 15px Orbitron, monospace';
   cx.fillStyle = 'rgba(255,210,50,0.75)';
@@ -539,6 +805,34 @@ function drawHUD() {
     cx.shadowBlur  = active ? 8 : 0;
     cx.fillRect(bX + j * 14, bY + 30, 10, 10);
   }
+
+  // Goal progress bar (center top) — continuously fills until player crosses finish line
+  {
+    const gPct = Math.min(1, scrolled / goalDist);
+    const gX = W / 2 - 80, gY = 14, gW = 160, gH = 5;
+    cx.shadowBlur = 0;
+    cx.fillStyle = 'rgba(255,255,255,0.05)';
+    cx.fillRect(gX, gY, gW, gH);
+    const gg = cx.createLinearGradient(gX, 0, gX + gW, 0);
+    gg.addColorStop(0, '#00ffaa'); gg.addColorStop(1, '#00eeff');
+    cx.fillStyle = gg;
+    cx.fillRect(gX, gY, gW * gPct, gH);
+    cx.textAlign = 'center';
+    cx.font = '9px Orbitron, monospace';
+    cx.fillStyle = 'rgba(0,220,180,0.45)';
+    cx.fillText('GOAL', W / 2, gY + 17);
+  }
+
+  // Flash "FINAL STRETCH" when goal line is on screen
+  if (goalLine) {
+    const blink = Math.floor(Date.now() / 400) % 2 === 0;
+    cx.textAlign = 'center';
+    cx.font = 'bold 13px Orbitron, monospace';
+    cx.fillStyle = blink ? 'rgba(0,255,180,0.92)' : 'rgba(0,255,180,0.22)';
+    cx.shadowColor = '#00ffcc'; cx.shadowBlur = blink ? 12 : 0;
+    cx.fillText('── FINAL STRETCH ──', W / 2, H - 18);
+  }
+
   cx.restore();
 }
 
@@ -565,13 +859,17 @@ function drawStart() {
 
   cx.font = '11px Orbitron, monospace';
   cx.fillStyle = 'rgba(100,160,200,0.38)';
-  cx.fillText('DOUBLE JUMP  ·  HOLD ↓ TO SLIDE  ·  AVOID OBSTACLES', W / 2, H / 2 + 50);
+  cx.fillText('DOUBLE JUMP  ·  HOLD ↓ TO SLIDE  ·  COLLECT COINS  ·  DON\'T FALL', W / 2, H / 2 + 50);
 
   if (best > 0) {
     cx.font = 'bold 13px Orbitron, monospace';
     cx.fillStyle = 'rgba(255,200,40,0.80)';
-    cx.fillText(`★  BEST : ${String(best).padStart(6, '0')}`, W / 2, H / 2 + 86);
+    cx.fillText(`★  BEST : ${String(best).padStart(6, '0')}`, W / 2, H / 2 + 72);
   }
+
+  cx.font = '11px Orbitron, monospace';
+  cx.fillStyle = 'rgba(0,220,180,0.55)';
+  cx.fillText(`目標距離：${goalDist}`, W / 2, H / 2 + 96);
   cx.restore();
 }
 
@@ -613,6 +911,52 @@ function drawOver() {
   cx.restore();
 }
 
+function drawWin() {
+  cx.save();
+  cx.fillStyle = 'rgba(0,20,12,0.72)';
+  cx.fillRect(0, 0, W, H);
+  cx.textAlign = 'center';
+
+  cx.shadowColor = '#00ffcc'; cx.shadowBlur = 50;
+  cx.font = 'bold 58px Orbitron, monospace';
+  cx.fillStyle = '#00ffee';
+  cx.fillText('GOAL!', W / 2, H / 2 - 52);
+  cx.shadowBlur = 0;
+
+  cx.font = '13px Orbitron, monospace';
+  cx.fillStyle = 'rgba(100,230,200,0.5)';
+  cx.fillText('終點抵達', W / 2, H / 2 - 20);
+
+  cx.font = '11px Orbitron, monospace';
+  cx.fillStyle = 'rgba(0,255,180,0.55)';
+  cx.fillText(`▶  下次目標距離：${goalDist}`, W / 2, H / 2 - 2);
+
+  cx.font = 'bold 28px Orbitron, monospace';
+  cx.fillStyle = 'rgba(255,255,255,0.92)';
+  cx.fillText(String(score).padStart(6, '0'), W / 2, H / 2 + 16);
+  cx.font = '11px Orbitron, monospace';
+  cx.fillStyle = 'rgba(160,160,180,0.5)';
+  cx.fillText('SCORE', W / 2, H / 2 + 34);
+
+  if (score >= best && score > 0) {
+    cx.shadowColor = '#ffd040'; cx.shadowBlur = 14;
+    cx.font = 'bold 14px Orbitron, monospace';
+    cx.fillStyle = '#ffd040';
+    cx.fillText('✦  NEW RECORD  ✦', W / 2, H / 2 + 60);
+    cx.shadowBlur = 0;
+  } else if (best > 0) {
+    cx.font = '13px Orbitron, monospace';
+    cx.fillStyle = 'rgba(255,200,40,0.60)';
+    cx.fillText(`BEST : ${String(best).padStart(6, '0')}`, W / 2, H / 2 + 60);
+  }
+
+  const blink = Math.floor(Date.now() / 530) % 2 === 0;
+  cx.font = '12px Orbitron, monospace';
+  cx.fillStyle = blink ? 'rgba(0,255,180,0.80)' : 'rgba(0,255,180,0.18)';
+  cx.fillText('PRESS SPACE OR CLICK TO PLAY AGAIN', W / 2, H / 2 + 96);
+  cx.restore();
+}
+
 // ── Main Loop ──────────────────────────────────────────────────────────────────
 function loop() {
   requestAnimationFrame(loop);
@@ -626,15 +970,19 @@ function loop() {
 
   cx.clearRect(-20, -20, W + 40, H + 40);
   drawBG();
-  drawGround();
+  drawGrounds();
   drawPlatforms();
+  drawCoins();
   drawObstacles();
+  drawEnemies();
+  drawGoalLine();
   drawPlayer();
   drawSparks();
   drawHUD();
 
   if (mode === 'start')               drawStart();
   else if (mode === 'over')           drawOver();
+  else if (mode === 'won')            drawWin();
 
   cx.restore();
 }
