@@ -6,23 +6,23 @@
 <title>WALL RUNNER 爬牆跑酷</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; }
   body {
     background: #0d1f1c;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 100vh;
     overflow: hidden;
     user-select: none;
     font-family: monospace;
   }
-  canvas { display: block; }
+  canvas { display: block; position: fixed; top: 0; left: 0; }
   #hint {
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
     color: rgba(180, 220, 210, 0.35);
     font-size: 11px;
     letter-spacing: 2px;
-    margin-top: 10px;
+    white-space: nowrap;
   }
 </style>
 </head>
@@ -35,8 +35,13 @@
 // ── Canvas ─────────────────────────────────────────────────────────────────────
 const cv = document.getElementById('c');
 const cx = cv.getContext('2d');
-const W = cv.width  = 900;
-const H = cv.height = 500;
+let W = cv.width  = window.innerWidth;
+let H = cv.height = window.innerHeight;
+
+window.addEventListener('resize', () => {
+  W = cv.width  = window.innerWidth;
+  H = cv.height = window.innerHeight;
+});
 
 // ── 物理常數 ───────────────────────────────────────────────────────────────────
 const GRAV        = 0.58;
@@ -148,6 +153,8 @@ let pl = {
 // ── 角色圖片 ──────────────────────────────────────────────────────────────────
 const characterImg = new Image();
 characterImg.src = 'character.png';
+const jumpImg = new Image();
+jumpImg.src = 'character_jump.png';
 
 // ── 鏡頭 ──────────────────────────────────────────────────────────────────────
 let cam = { x: 0, y: 0 };
@@ -479,8 +486,11 @@ function drawPlayer() {
   cx.translate(sx, sy);
   if (pl.facing === -1) cx.scale(-1, 1); // 向左時水平翻轉
 
+  // 跳躍中（離地且非爬牆）使用跳躍圖，否則使用一般圖
+  const isJumping = !pl.onGround && pl.onWall === 0;
+  const img = isJumping ? jumpImg : characterImg;
   const dw = 54, dh = 44;
-  cx.drawImage(characterImg, -dw / 2, -10, dw, dh);
+  cx.drawImage(img, -dw / 2, -10, dw, dh);
   cx.restore();
 }
 
