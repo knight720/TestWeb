@@ -145,6 +145,10 @@ let pl = {
   deathTimer: 0,
 };
 
+// ── 角色圖片 ──────────────────────────────────────────────────────────────────
+const characterImg = new Image();
+characterImg.src = 'character.png';
+
 // ── 鏡頭 ──────────────────────────────────────────────────────────────────────
 let cam = { x: 0, y: 0 };
 
@@ -466,55 +470,17 @@ function drawGoal() {
   cx.restore();
 }
 
-// 繪製火柴人
+// 繪製角色圖片 (向右不翻轉，向左水平翻轉)
 function drawPlayer() {
   if (!pl.alive) return;
   const sx = pl.x + pl.w / 2 - cam.x;
   const sy = pl.y - cam.y;
   cx.save();
   cx.translate(sx, sy);
-  if (pl.facing === -1) cx.scale(-1, 1);
+  if (pl.facing === -1) cx.scale(-1, 1); // 向左時水平翻轉
 
-  const moving    = Math.abs(pl.vx) > 0.5 && pl.onGround;
-  const legSwing  = moving ? Math.sin(pl.animTick * 0.22) * 10 : 0;
-  const armSwing  = moving ? Math.sin(pl.animTick * 0.22 + Math.PI) * 7 : 0;
-  const wallSlide = pl.onWall !== 0 && !pl.onGround;
-
-  // 頭部 (橘色)
-  cx.fillStyle = '#ff8c00';
-  cx.beginPath(); cx.arc(0, 9, 9, 0, Math.PI * 2); cx.fill();
-  // 頭部高光
-  cx.fillStyle = 'rgba(255,215,110,0.45)';
-  cx.beginPath(); cx.arc(-2, 5, 4, 0, Math.PI * 2); cx.fill();
-
-  // 身體骨架
-  cx.strokeStyle = '#111';
-  cx.lineWidth = 2.8;
-  cx.lineCap = 'round';
-  cx.lineJoin = 'round';
-
-  // 軀幹
-  cx.beginPath(); cx.moveTo(0, 18); cx.lineTo(0, 33); cx.stroke();
-
-  // 手臂
-  if (wallSlide) {
-    // 爬牆動作：手伸向牆
-    cx.beginPath(); cx.moveTo(0, 22); cx.lineTo(14, 17); cx.stroke();
-    cx.beginPath(); cx.moveTo(0, 22); cx.lineTo(-7, 28); cx.stroke();
-  } else {
-    cx.beginPath(); cx.moveTo(0, 22); cx.lineTo( 12 + armSwing, 30); cx.stroke();
-    cx.beginPath(); cx.moveTo(0, 22); cx.lineTo(-12 - armSwing, 30); cx.stroke();
-  }
-
-  // 腿
-  if (wallSlide) {
-    cx.beginPath(); cx.moveTo(0, 33); cx.lineTo(7,  44); cx.stroke();
-    cx.beginPath(); cx.moveTo(0, 33); cx.lineTo(-3, 44); cx.stroke();
-  } else {
-    cx.beginPath(); cx.moveTo(0, 33); cx.lineTo(-9 + legSwing,  44); cx.stroke();
-    cx.beginPath(); cx.moveTo(0, 33); cx.lineTo( 9 - legSwing,  44); cx.stroke();
-  }
-
+  const dw = 54, dh = 44;
+  cx.drawImage(characterImg, -dw / 2, -10, dw, dh);
   cx.restore();
 }
 
