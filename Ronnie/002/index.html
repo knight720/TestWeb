@@ -490,7 +490,7 @@ function drawPlayer() {
   const isJumping = !pl.onGround && pl.onWall === 0;
   const img = isJumping ? jumpImg : characterImg;
   const dw = 54, dh = 44;
-  cx.drawImage(img, -dw / 2, -10, dw, dh);
+  cx.drawImage(img, -dw / 2, 0, dw, dh);
   cx.restore();
 }
 
